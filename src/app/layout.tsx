@@ -44,7 +44,7 @@ export const viewport: Viewport = {
 
 const RootLayout = ({ children }: RootLayoutProps) => {
   return (
-    <html lang="en">
+    <html lang="nl">
       <body>
         <Providers>
           <Layout>{children}</Layout>

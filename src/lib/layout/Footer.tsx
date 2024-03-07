@@ -2,11 +2,15 @@ import { Flex, Link, Text } from '@chakra-ui/react';
 
 const Footer = () => {
   return (
-    <Flex as="footer" width="full" justifyContent="center">
+    <Flex as="footer" width="full" justifyContent="center" paddingY={8}>
       <Text fontSize="sm">
         {new Date().getFullYear()} -{' '}
-        <Link href="https://sznm.dev" isExternal rel="noopener noreferrer">
-          sznm.dev
+        <Link
+          href="https://be.linkedin.com/in/wout-rombouts"
+          isExternal
+          rel="noopener noreferrer"
+        >
+          Wout Rombouts
         </Link>
       </Text>
     </Flex>
