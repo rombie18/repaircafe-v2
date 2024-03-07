@@ -26,8 +26,12 @@ function OnboardingCard({
   href: string;
 }) {
   return (
-    <LinkBox flex={1}>
-      <Card h="100%">
+    <LinkBox
+      rounded="md"
+      flex="0 0 50%"
+      _hover={{ border: '1px', borderColor: 'gray.600' }}
+    >
+      <Card>
         <CardBody>
           <Heading size="md">{heading}</Heading>
           <Text>{text}</Text>
@@ -67,7 +71,6 @@ const Home = () => {
         minHeight="50vh"
         gap={4}
         mb={8}
-        flex={1}
       >
         <OnboardingCard
           heading="Toestel stuk?"
