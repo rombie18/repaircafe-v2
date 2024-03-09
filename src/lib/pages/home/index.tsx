@@ -28,8 +28,12 @@ function OnboardingCard({
   return (
     <LinkBox
       rounded="md"
+      minWidth={{ base: '100%', md: 'unset' }}
+      maxWidth={{ base: 'unset', md: '40%' }}
       flex="0 0 50%"
-      _hover={{ border: '1px', borderColor: 'gray.600' }}
+      _hover={{
+        boxShadow: '0px 0px 8px 4px rgba(255, 255, 255, 0.3)',
+      }}
     >
       <Card>
         <CardBody>
@@ -68,9 +72,10 @@ const Home = () => {
         direction="row"
         alignItems="center"
         justifyContent="center"
-        minHeight="50vh"
         gap={4}
         mb={8}
+        paddingTop={10}
+        flexWrap={'wrap'}
       >
         <OnboardingCard
           heading="Toestel stuk?"

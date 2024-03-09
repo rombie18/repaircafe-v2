@@ -42,7 +42,7 @@ const Home = () => {
               <FormLabel>E-mailadres</FormLabel>
               <Input type="email" placeholder="jan.peeters@telenet.be" />
               <FormHelperText>
-                Het e-mailadres dat je bij registratie van je toestel opgaf.
+                Het e-mailadres dat je bij de registratie opgaf.
               </FormHelperText>
             </FormControl>
 
