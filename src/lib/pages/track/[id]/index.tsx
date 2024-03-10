@@ -30,40 +30,120 @@ import {
   VStack,
   useSteps,
 } from '@chakra-ui/react';
+import { REPARATIONS } from '~/lib/firebase/sample_data';
 
-const steps = [
-  {
-    title: 'Registratie',
-    description:
-      'Je toestel is geregistreerd en kan worden binnengebracht tijdens het evenement.',
-  },
-  {
-    title: 'Afgifte',
-    description:
-      'Het toestel is ontvangen en je kreeg een volgnummer toegewezen.',
-  },
-  {
-    title: 'Wachtrij',
-    description:
-      'Er zijn momenteel geen student-techniekers vrij. Je reparatie start zodadelijk.',
-  },
-  {
-    title: 'In reparatie',
-    description:
-      'Een student-technieker is bezig met de reparatie van je toestel.',
-  },
-  {
-    title: 'Voltooid',
-    description:
-      'De reparatie is afgelopen. Je kan je toestel terug komen ophalen.',
-  },
-];
+function ReparationStepsComponent({ reparation }: { reparation: Reparation }) {
+  const steps = [
+    {
+      state_cycle: 'REGISTERED',
+      title: 'Registratie',
+      description:
+        'Je toestel is geregistreerd en kan worden binnengebracht tijdens het evenement.',
+    },
+    {
+      state_cycle: 'DEPOSITED',
+      title: 'Afgifte',
+      description:
+        'Het toestel is ontvangen en je kreeg een volgnummer toegewezen.',
+    },
+    {
+      state_cycle: 'QUEUED',
+      title: 'Wachtrij',
+      description:
+        'Er zijn momenteel geen student-techniekers vrij. Je reparatie start zodadelijk.',
+    },
+    {
+      state_cycle: 'PENDING',
+      title: 'In reparatie',
+      description:
+        'Een student-technieker is bezig met de reparatie van je toestel.',
+    },
+    {
+      state_cycle: 'FINISHED',
+      title: 'Voltooid',
+      description:
+        'De reparatie is afgelopen. Je kan je toestel terug komen ophalen.',
+    },
+    {
+      state_cycle: 'COLLECTED',
+      title: 'Opgehaald',
+      description: 'Je hebt je toestel terug opgehaald. Tot volgend jaar!',
+    },
+  ];
 
-const Home = () => {
   const { activeStep } = useSteps({
-    index: 1,
+    index: steps.findIndex(
+      (step) => step.state_cycle === reparation.state_cycle
+    ),
     count: steps.length,
   });
+
+  return (
+    <Stepper
+      h="75dvh"
+      w="100%"
+      size="lg"
+      orientation="vertical"
+      index={activeStep}
+    >
+      {steps.map((step, index) => (
+        <Step key={index}>
+          <StepIndicator>
+            <StepStatus
+              complete={<StepIcon />}
+              incomplete={<StepNumber />}
+              active={<StepNumber />}
+            />
+          </StepIndicator>
+
+          <Box flexShrink="0">
+            <StepTitle>{step.title}</StepTitle>
+            <StepDescription>{step.description}</StepDescription>
+          </Box>
+
+          <StepSeparator />
+        </Step>
+      ))}
+    </Stepper>
+  );
+}
+
+function ReparationTag({ reparation }: { reparation: Reparation }) {
+  switch (reparation.state_reparation) {
+    case 'SUCCESS':
+      return (
+        <Tag size="lg" colorScheme="green" borderRadius="full">
+          <CheckIcon mr={2} />
+          <TagLabel>Reparatie gelukt</TagLabel>
+        </Tag>
+      );
+    case 'PARTIAL':
+      return (
+        <Tag size="lg" colorScheme="yellow" borderRadius="full">
+          <MinusIcon mr={2} />
+          <TagLabel>Reparatie gedeeltelijk gelukt</TagLabel>
+        </Tag>
+      );
+    case 'FAIL':
+      return (
+        <Tag size="lg" colorScheme="red" borderRadius="full">
+          <CloseIcon mr={2} />
+          <TagLabel>Reparatie niet gelukt</TagLabel>
+        </Tag>
+      );
+    case 'UNKNOWN':
+    default:
+      return (
+        <Tag size="lg" colorScheme="gray" borderRadius="full">
+          <QuestionIcon mr={2} />
+          <TagLabel>Status onbekend</TagLabel>
+        </Tag>
+      );
+  }
+}
+
+const Home = () => {
+  const reparation = REPARATIONS[2];
 
   return (
     <>
@@ -86,58 +166,16 @@ const Home = () => {
         flex={1}
       >
         <VStack w="100%" spacing={10} marginY={10}>
-          <Stepper
-            h="50dvh"
-            w="100%"
-            size="lg"
-            orientation="vertical"
-            index={activeStep}
-          >
-            {steps.map((step) => (
-              <Step>
-                <StepIndicator>
-                  <StepStatus
-                    complete={<StepIcon />}
-                    incomplete={<StepNumber />}
-                    active={<StepNumber />}
-                  />
-                </StepIndicator>
-
-                <Box flexShrink="0">
-                  <StepTitle>{step.title}</StepTitle>
-                  <StepDescription>{step.description}</StepDescription>
-                </Box>
-
-                <StepSeparator />
-              </Step>
-            ))}
-          </Stepper>
+          <ReparationStepsComponent reparation={reparation} />
 
           <FormControl>
             <FormLabel>Toestand herstelling</FormLabel>
-            <HStack spacing={4} wrap="wrap">
-              <Tag size="lg" colorScheme="green" borderRadius="full">
-                <CheckIcon mr={2} />
-                <TagLabel>Reparatie gelukt</TagLabel>
-              </Tag>
-              <Tag size="lg" colorScheme="yellow" borderRadius="full">
-                <MinusIcon mr={2} />
-                <TagLabel>Reparatie gedeeltelijk gelukt</TagLabel>
-              </Tag>
-              <Tag size="lg" colorScheme="red" borderRadius="full">
-                <CloseIcon mr={2} />
-                <TagLabel>Reparatie niet gelukt</TagLabel>
-              </Tag>
-              <Tag size="lg" colorScheme="gray" borderRadius="full">
-                <QuestionIcon mr={2} />
-                <TagLabel>Status onbekend</TagLabel>
-              </Tag>
-            </HStack>
+            <ReparationTag reparation={reparation} />
           </FormControl>
 
           <FormControl>
             <FormLabel>Opmerkingen</FormLabel>
-            <Textarea isDisabled />
+            <Textarea isDisabled>{reparation.remarks}</Textarea>
             <FormHelperText>
               Als de technieker of een medewerker opmerkingen heeft
               achtergelaten, kan je deze in bovenstaand vak lezen.

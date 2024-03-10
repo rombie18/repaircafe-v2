@@ -13,7 +13,10 @@ import {
   InputGroup,
   InputRightElement,
 } from '@chakra-ui/react';
-import { TriangleDownIcon, TriangleUpIcon } from '@chakra-ui/icons';
+import {
+  TriangleDownIcon,
+  TriangleUpIcon,
+} from '@chakra-ui/icons';
 import {
   useReactTable,
   flexRender,

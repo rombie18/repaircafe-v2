@@ -75,7 +75,7 @@ const Home = () => {
         gap={4}
         mb={8}
         paddingTop={10}
-        flexWrap={'wrap'}
+        flexWrap="wrap"
       >
         <OnboardingCard
           heading="Toestel stuk?"

@@ -1,107 +1,169 @@
 'use client';
 
+import { CheckIcon, SettingsIcon, TimeIcon } from '@chakra-ui/icons';
 import {
-  Button,
+  Badge,
+  Box,
+  Center,
   Flex,
-  FormControl,
-  FormHelperText,
-  FormLabel,
   HStack,
   Heading,
-  Input,
-  InputGroup,
-  InputLeftAddon,
-  Radio,
-  RadioGroup,
-  Stack,
-  Text,
-  Textarea,
+  SimpleGrid,
   VStack,
 } from '@chakra-ui/react';
+import React, { useEffect, useRef, useState } from 'react';
+import Marquee from 'react-fast-marquee';
+import { REPARATIONS } from '~/lib/firebase/sample_data';
 
 const Home = () => {
   return (
-    <>
-      <VStack paddingY={6} align="start">
-        <Heading>Registreer je toestel</Heading>
-        <Text>
-          Heb je een stuk of niet goed werkend toestel en wil je dit graag laten
-          repareren door een gemotiveerd team van studenten en docenten?
-          Registreer hier je toestel en breng het naar ons herstelpunt op X.
-        </Text>
-      </VStack>
+    <Box display="flex" flexDirection="column">
+      <Box flex="1" display="flex" gap={6}>
+        <Box flex="1" py="4">
+          <TokenGrid
+            reparations={REPARATIONS.filter(
+              (reparation) => reparation.state_cycle === 'PENDING'
+            )}
+            heading="Reparatie bezig"
+            icon={<SettingsIcon />}
+            color="yellow.400"
+          />
+        </Box>
 
-      <Flex
-        direction="row"
-        alignItems="center"
-        justifyContent="center"
-        minHeight="50vh"
-        gap={4}
-        mb={8}
-        flex={1}
-      >
-        <VStack w="100%" spacing={10} marginY={10}>
-          <VStack w="100%" spacing={4}>
-            <FormControl>
-              <FormLabel>Voor- en achternaam</FormLabel>
-              <HStack>
-                <Input placeholder="Jan" />
-                <Input placeholder="Peeters" />
-              </HStack>
-            </FormControl>
+        <Box flex="1" py="4">
+          <TokenGrid
+            reparations={REPARATIONS.filter(
+              (reparation) => reparation.state_cycle === 'FINISHED'
+            )}
+            heading="Reparatie voltooid"
+            icon={<CheckIcon />}
+            color="green.400"
+          />
+        </Box>
+      </Box>
 
-            <FormControl>
-              <FormLabel>E-mailadres</FormLabel>
-              <Input type="email" placeholder="jan.peeters@telenet.be" />
-              <FormHelperText>
-                Je zal op dit e-mailadres een melding ontvangen wanneer je
-                toestel gerepareerd is.
-              </FormHelperText>
-            </FormControl>
-
-            <FormControl>
-              <FormLabel>Telefoonnummer</FormLabel>
-              <InputGroup>
-                <InputLeftAddon>+32</InputLeftAddon>
-                <Input type="tel" placeholder="470 12 34 56" />
-              </InputGroup>
-              <FormHelperText>
-                Moesten er zich toch problemen voordoen, bereiken we je via dit
-                nummer.
-              </FormHelperText>
-            </FormControl>
-
-            <FormControl>
-              <FormLabel>Omschrijving toestel</FormLabel>
-              <Input placeholder="Stofzuiger" />
-            </FormControl>
-
-            <FormControl>
-              <FormLabel>Omschrijving probleem</FormLabel>
-              <Textarea placeholder="Wanneer ik het toestel inschakel gebeurt er niets. Ik hoor een zoemend geluid." />
-              <FormHelperText>
-                Een goede omschrijving help onze techniekers om snel een goede
-                oplossing te vinden.
-              </FormHelperText>
-            </FormControl>
-
-            <FormControl>
-              <FormLabel>Toestand toestel</FormLabel>
-              <RadioGroup>
-                <Stack direction="row">
-                  <Radio value="BROKEN">Defect</Radio>
-                  <Radio value="FAULTY">Niet goed werkend</Radio>
-                  <Radio value="OTHER">Anders</Radio>
-                </Stack>
-              </RadioGroup>
-            </FormControl>
-          </VStack>
-
-          <Button w="100%">Registreren</Button>
-        </VStack>
-      </Flex>
-    </>
+      <Box pt="4">
+        <TokenMarquee
+          reparations={REPARATIONS.filter(
+            (reparation) => reparation.state_cycle === 'QUEUED'
+          )}
+          heading="Wachtrij:"
+          color="gray.400"
+        />
+      </Box>
+    </Box>
   );
 };
+
+function TokenGrid({
+  reparations,
+  icon,
+  color,
+  heading,
+}: {
+  reparations: Reparation[];
+  icon: JSX.Element;
+  color: string;
+  heading: string;
+}) {
+  const gridRef = useRef<HTMLInputElement>(null);
+  const [scrollInterval, setScrollInterval] = useState<NodeJS.Timeout>();
+  const [scrollActive, setScrollActive] = useState(true);
+
+  useEffect(() => {
+    const scrollGrid = () => {
+      if (gridRef.current) {
+        const isScrolledToTop = gridRef.current.scrollTop === 0;
+        const isScrolledToBottom =
+          gridRef.current.scrollHeight - gridRef.current.scrollTop ===
+          gridRef.current.clientHeight;
+
+        if (isScrolledToBottom) {
+          setScrollActive(false);
+          setTimeout(() => {
+            setScrollActive(true);
+            gridRef.current && (gridRef.current.scrollTop = 0);
+          }, 3000);
+        } else if (isScrolledToTop && scrollActive) {
+          setScrollActive(false);
+          setTimeout(() => {
+            gridRef.current && (gridRef.current.scrollTop += 1);
+            setScrollActive(true);
+          }, 5000);
+        } else if (scrollActive) {
+          gridRef.current.scrollTop += 1;
+        }
+      }
+    };
+
+    const intervalId = setInterval(scrollGrid, 50);
+    setScrollInterval(intervalId);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  return (
+    <Flex flexDirection="column" flex="1">
+      <VStack mb={4}>
+        {React.cloneElement(icon, { color: color, boxSize: 8 })}
+        <Heading color={color}>{heading}</Heading>
+      </VStack>
+      <Box overflowY="auto" maxH="50vh" ref={gridRef}>
+        <SimpleGrid minChildWidth="5rem" spacing={4}>
+          {reparations.map((reparation) => (
+            <TokenComponent
+              key={reparation._id}
+              reparation={reparation}
+              color={color}
+            />
+          ))}
+        </SimpleGrid>
+      </Box>
+    </Flex>
+  );
+}
+
+function TokenMarquee({
+  reparations,
+  color,
+  heading,
+}: {
+  reparations: Reparation[];
+  color: string;
+  heading: string;
+}) {
+  return (
+    <HStack w="100%" spacing={6}>
+      <Heading color={color}>{heading}</Heading>
+      <Marquee>
+        {reparations.map((reparation) => (
+          <Box mx={1} key={reparation._id}>
+            <TokenComponent reparation={reparation} color={color} />
+          </Box>
+        ))}
+      </Marquee>
+    </HStack>
+  );
+}
+
+function TokenComponent({
+  reparation,
+  color,
+}: {
+  reparation: Reparation;
+  color: string;
+}) {
+  return (
+    <Box bg={color} p={3}>
+      <Center>
+        <Badge fontSize="2rem" colorScheme="black">
+          {reparation.token}
+        </Badge>
+      </Center>
+    </Box>
+  );
+}
 
 export default Home;

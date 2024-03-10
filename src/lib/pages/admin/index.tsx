@@ -10,10 +10,17 @@ import {
   SettingsIcon,
   SpinnerIcon,
   DownloadIcon,
-  ViewOffIcon,
   UnlockIcon,
+  WarningTwoIcon,
+  EditIcon,
 } from '@chakra-ui/icons';
 import {
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
   Badge,
   Box,
   Button,
@@ -27,159 +34,8 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { DataTable } from './DataTable';
 import { DateTime } from 'luxon';
 import React from 'react';
-
-const data: Reparation[] = [
-  {
-    _id: '0',
-    events: [
-      {
-        state_cycle: 'REGISTERED',
-        timestamp: new Date('2024-03-09T16:00:00'),
-      },
-    ],
-    item_id: '',
-    remarks: '',
-    state_cycle: 'REGISTERED',
-    state_reparation: 'UNKNOWN',
-    state_token: 'RELEASED',
-    token: '',
-  },
-  {
-    _id: '1',
-    events: [
-      {
-        state_cycle: 'REGISTERED',
-        timestamp: new Date('2024-03-09T16:00:00'),
-      },
-      {
-        state_cycle: 'DEPOSITED',
-        timestamp: new Date('2024-03-09T16:10:00'),
-      },
-    ],
-    item_id: '',
-    remarks: '',
-    state_cycle: 'DEPOSITED',
-    state_reparation: 'UNKNOWN',
-    state_token: 'RESERVED',
-    token: 'A12',
-  },
-  {
-    _id: '2',
-    events: [
-      {
-        state_cycle: 'REGISTERED',
-        timestamp: new Date('2024-03-09T16:00:00'),
-      },
-      {
-        state_cycle: 'DEPOSITED',
-        timestamp: new Date('2024-03-09T16:10:00'),
-      },
-      {
-        state_cycle: 'QUEUED',
-        timestamp: new Date('2024-03-09T16:20:00'),
-      },
-    ],
-    item_id: '',
-    remarks: '',
-    state_cycle: 'QUEUED',
-    state_reparation: 'UNKNOWN',
-    state_token: 'RESERVED',
-    token: 'A12',
-  },
-  {
-    _id: '3',
-    events: [
-      {
-        state_cycle: 'REGISTERED',
-        timestamp: new Date('2024-03-09T16:00:00'),
-      },
-      {
-        state_cycle: 'DEPOSITED',
-        timestamp: new Date('2024-03-09T16:10:00'),
-      },
-      {
-        state_cycle: 'QUEUED',
-        timestamp: new Date('2024-03-09T16:20:00'),
-      },
-      {
-        state_cycle: 'PENDING',
-        timestamp: new Date('2024-03-09T16:30:00'),
-      },
-    ],
-    item_id: '',
-    remarks: '',
-    state_cycle: 'PENDING',
-    state_reparation: 'UNKNOWN',
-    state_token: 'RESERVED',
-    token: 'A12',
-  },
-  {
-    _id: '4',
-    events: [
-      {
-        state_cycle: 'REGISTERED',
-        timestamp: new Date('2024-03-09T16:00:00'),
-      },
-      {
-        state_cycle: 'DEPOSITED',
-        timestamp: new Date('2024-03-09T16:10:00'),
-      },
-      {
-        state_cycle: 'QUEUED',
-        timestamp: new Date('2024-03-09T16:20:00'),
-      },
-      {
-        state_cycle: 'PENDING',
-        timestamp: new Date('2024-03-09T16:30:00'),
-      },
-      {
-        state_cycle: 'FINISHED',
-        timestamp: new Date('2024-03-09T16:40:00'),
-      },
-    ],
-    item_id: '',
-    remarks: '',
-    state_cycle: 'FINISHED',
-    state_reparation: 'PARTIAL',
-    state_token: 'RESERVED',
-    token: 'A12',
-  },
-  {
-    _id: '5',
-    events: [
-      {
-        state_cycle: 'REGISTERED',
-        timestamp: new Date('2024-03-09T16:00:00'),
-      },
-      {
-        state_cycle: 'DEPOSITED',
-        timestamp: new Date('2024-03-09T16:10:00'),
-      },
-      {
-        state_cycle: 'QUEUED',
-        timestamp: new Date('2024-03-09T16:20:00'),
-      },
-      {
-        state_cycle: 'PENDING',
-        timestamp: new Date('2024-03-09T16:30:00'),
-      },
-      {
-        state_cycle: 'FINISHED',
-        timestamp: new Date('2024-03-09T16:40:00'),
-      },
-      {
-        state_cycle: 'COLLECTED',
-        timestamp: new Date('2024-03-09T16:50:00'),
-      },
-    ],
-    item_id: '',
-    remarks: '',
-    state_cycle: 'COLLECTED',
-    state_reparation: 'PARTIAL',
-    state_token: 'RELEASED',
-    token: 'A12',
-  },
-];
+import NextLink from 'next/link';
+import { REPARATIONS } from '~/lib/firebase/sample_data';
 
 const columnHelper = createColumnHelper<Reparation>();
 
@@ -228,7 +84,7 @@ const columns = [
           );
         case 'QUEUED':
           return (
-            <Badge variant="outline" colorScheme="yellow">
+            <Badge variant="outline" colorScheme="red">
               In wachtrij
             </Badge>
           );
@@ -261,13 +117,103 @@ const columns = [
     },
     header: 'Itemstatus',
   }),
+  columnHelper.display({
+    id: 'actions',
+    cell: (props) => {
+      const state_cycle: string = props.row.getValue('state_cycle');
+      // const id: string = props.row.getValue('_id');
+
+      switch (state_cycle) {
+        case 'REGISTERED':
+          return (
+            <HStack>
+              <ActionButton
+                icon={<DownloadIcon />}
+                colorScheme="gray"
+                text="In ontvangst nemen"
+              />
+              <EditButton />
+              <DeleteButton />
+            </HStack>
+          );
+        case 'DEPOSITED':
+          return (
+            <HStack>
+              <ActionButton
+                icon={<SpinnerIcon />}
+                colorScheme="red"
+                text="In wachtrij zetten"
+              />
+              <EditButton />
+              <DeleteButton />
+            </HStack>
+          );
+        case 'QUEUED':
+          return (
+            <HStack>
+              <ActionButton
+                icon={<SettingsIcon />}
+                colorScheme="yellow"
+                text="Reparatie starten"
+              />
+              <EditButton />
+              <DeleteButton />
+            </HStack>
+          );
+        case 'PENDING':
+          return (
+            <HStack>
+              <ActionButton
+                icon={<BellIcon />}
+                colorScheme="green"
+                text="Eigenaar oproepen"
+              />
+              <EditButton />
+              <DeleteButton />
+            </HStack>
+          );
+        case 'FINISHED':
+          return (
+            <HStack>
+              <ActionButton
+                icon={<CheckIcon />}
+                colorScheme="green"
+                text="Als opgehaald markeren"
+              />
+              <EditButton />
+              <DeleteButton />
+            </HStack>
+          );
+        case 'COLLECTED':
+          return (
+            <HStack>
+              <ActionButton
+                icon={<UnlockIcon />}
+                colorScheme="gray"
+                text="Volgnummer vrijgeven"
+              />
+              <EditButton />
+              <DeleteButton />
+            </HStack>
+          );
+        case 'UNKNOWN':
+        default:
+          return (
+            <HStack>
+              <DeleteButton />
+            </HStack>
+          );
+      }
+    },
+    header: 'Acties',
+  }),
   columnHelper.accessor('state_reparation', {
     id: 'state_reparation',
     cell: (info) => {
       switch (info.getValue()) {
         case 'SUCCESS':
           return (
-            <ExpandableTag
+            <ExpandableReparationTag
               colorScheme="green"
               icon={<CheckIcon />}
               text="Reparatie gelukt"
@@ -275,7 +221,7 @@ const columns = [
           );
         case 'PARTIAL':
           return (
-            <ExpandableTag
+            <ExpandableReparationTag
               colorScheme="yellow"
               icon={<MinusIcon />}
               text="Reparatie gedeeltelijk gelukt"
@@ -283,7 +229,7 @@ const columns = [
           );
         case 'FAIL':
           return (
-            <ExpandableTag
+            <ExpandableReparationTag
               colorScheme="red"
               icon={<CloseIcon />}
               text="Reparatie mislukt"
@@ -292,7 +238,7 @@ const columns = [
         case 'UNKNOWN':
         default:
           return (
-            <ExpandableTag
+            <ExpandableReparationTag
               colorScheme="gray"
               icon={<QuestionIcon />}
               text="Status onbekend"
@@ -300,170 +246,110 @@ const columns = [
           );
       }
     },
-    header: 'Gerepareerd?',
-  }),
-  columnHelper.display({
-    id: 'actions',
-    cell: (props) => {
-      const state_cycle: string = props.row.getValue('state_cycle');
-      const _id: string = props.row.getValue('_id');
-
-      switch (state_cycle) {
-        case 'REGISTERED':
-          return (
-            <HStack>
-              <Button
-                leftIcon={<DownloadIcon />}
-                colorScheme="gray"
-                variant="solid"
-                size="sm"
-              >
-                In ontvangst nemen
-              </Button>
-              <IconButton
-                isRound={true}
-                variant="outline"
-                colorScheme="red"
-                size="sm"
-                aria-label="Reparatie verwijderen"
-                icon={<DeleteIcon />}
-              />
-            </HStack>
-          );
-        case 'DEPOSITED':
-          return (
-            <HStack>
-              <Button
-                leftIcon={<SpinnerIcon />}
-                colorScheme="yellow"
-                variant="solid"
-                size="sm"
-              >
-                In wachtrij zetten
-              </Button>
-              <IconButton
-                isRound={true}
-                variant="outline"
-                colorScheme="red"
-                size="sm"
-                aria-label="Reparatie verwijderen"
-                icon={<DeleteIcon />}
-              />
-            </HStack>
-          );
-        case 'QUEUED':
-          return (
-            <HStack>
-              <Button
-                leftIcon={<SettingsIcon />}
-                colorScheme="yellow"
-                variant="solid"
-                size="sm"
-              >
-                Reparatie starten
-              </Button>
-              <IconButton
-                isRound={true}
-                variant="outline"
-                colorScheme="red"
-                size="sm"
-                aria-label="Reparatie verwijderen"
-                icon={<DeleteIcon />}
-              />
-            </HStack>
-          );
-        case 'PENDING':
-          return (
-            <HStack>
-              <Button
-                leftIcon={<BellIcon />}
-                colorScheme="green"
-                variant="solid"
-                size="sm"
-              >
-                Eigenaar oproepen
-              </Button>
-              <IconButton
-                isRound={true}
-                variant="outline"
-                colorScheme="red"
-                size="sm"
-                aria-label="Reparatie verwijderen"
-                icon={<DeleteIcon />}
-              />
-            </HStack>
-          );
-        case 'FINISHED':
-          return (
-            <HStack>
-              <Button
-                leftIcon={<CheckIcon />}
-                colorScheme="green"
-                variant="solid"
-                size="sm"
-              >
-                Als opgehaald markeren
-              </Button>
-              <IconButton
-                isRound={true}
-                variant="outline"
-                colorScheme="red"
-                size="sm"
-                aria-label="Reparatie verwijderen"
-                icon={<DeleteIcon />}
-              />
-            </HStack>
-          );
-        case 'COLLECTED':
-          return (
-            <HStack>
-              <Button
-                leftIcon={<UnlockIcon />}
-                colorScheme="gray"
-                variant="solid"
-                size="sm"
-              >
-                Volgnummer vrijgeven
-              </Button>
-              <IconButton
-                isRound={true}
-                variant="outline"
-                colorScheme="red"
-                size="sm"
-                aria-label="Reparatie verwijderen"
-                icon={<DeleteIcon />}
-              />
-            </HStack>
-          );
-        case 'UNKNOWN':
-        default:
-          return (
-            <HStack>
-              <IconButton
-                isRound={true}
-                variant="outline"
-                colorScheme="red"
-                size="sm"
-                aria-label="Reparatie verwijderen"
-                icon={<DeleteIcon />}
-              />
-            </HStack>
-          );
-      }
-    },
-    header: 'Acties',
+    header: '',
   }),
 ];
 
 const Home = () => {
   return (
     <Box overflowX={'auto'}>
-      <DataTable columns={columns} data={data} />
+      <DataTable columns={columns} data={REPARATIONS} />
     </Box>
   );
 };
 
-function ExpandableTag({
+function ActionButton({
+  colorScheme,
+  icon,
+  text,
+}: {
+  colorScheme: string;
+  icon: JSX.Element;
+  text: string;
+}) {
+  return (
+    <Button
+      w="100%"
+      leftIcon={icon}
+      colorScheme={colorScheme}
+      variant="solid"
+      size="sm"
+    >
+      {text}
+    </Button>
+  );
+}
+
+function EditButton() {
+  return (
+    <NextLink href="/admin/reparation" passHref>
+      <IconButton
+        as="a"
+        isRound
+        variant="outline"
+        colorScheme="yellow"
+        size="sm"
+        aria-label="Reparatie wijzigen"
+        icon={<EditIcon />}
+      />
+    </NextLink>
+  );
+}
+
+function DeleteButton() {
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const cancelRef = React.useRef(null);
+
+  return (
+    <>
+      <IconButton
+        onClick={onOpen}
+        isRound
+        variant="outline"
+        colorScheme="red"
+        size="sm"
+        aria-label="Reparatie verwijderen"
+        icon={<DeleteIcon />}
+      />
+
+      <AlertDialog
+        isOpen={isOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={onClose}
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Reparatie verwijderen
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+              Opgelet! Verwijder enkel een reparatie als deze foutief werd
+              toegevoegd. Als u doorgaat wordt het item permanent verwijderd en
+              is het alsof het nooit heeft bestaan.
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={onClose}>
+                Annuleren
+              </Button>
+              <Button
+                leftIcon={<WarningTwoIcon />}
+                colorScheme="red"
+                onClick={() => console.error('Not implemented.')}
+                ml={3}
+              >
+                Permanent verwijderen
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
+    </>
+  );
+}
+
+function ExpandableReparationTag({
   colorScheme,
   icon,
   text,
