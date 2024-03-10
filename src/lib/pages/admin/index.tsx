@@ -127,80 +127,80 @@ const columns = [
         case 'REGISTERED':
           return (
             <HStack>
-              <ActionButton
+              <ActionButtonComponent
                 icon={<DownloadIcon />}
                 colorScheme="gray"
                 text="In ontvangst nemen"
               />
-              <EditButton />
-              <DeleteButton />
+              <EditButtonComponent />
+              <DeleteButtonComponent />
             </HStack>
           );
         case 'DEPOSITED':
           return (
             <HStack>
-              <ActionButton
+              <ActionButtonComponent
                 icon={<SpinnerIcon />}
                 colorScheme="red"
                 text="In wachtrij zetten"
               />
-              <EditButton />
-              <DeleteButton />
+              <EditButtonComponent />
+              <DeleteButtonComponent />
             </HStack>
           );
         case 'QUEUED':
           return (
             <HStack>
-              <ActionButton
+              <ActionButtonComponent
                 icon={<SettingsIcon />}
                 colorScheme="yellow"
                 text="Reparatie starten"
               />
-              <EditButton />
-              <DeleteButton />
+              <EditButtonComponent />
+              <DeleteButtonComponent />
             </HStack>
           );
         case 'PENDING':
           return (
             <HStack>
-              <ActionButton
+              <ActionButtonComponent
                 icon={<BellIcon />}
                 colorScheme="green"
                 text="Eigenaar oproepen"
               />
-              <EditButton />
-              <DeleteButton />
+              <EditButtonComponent />
+              <DeleteButtonComponent />
             </HStack>
           );
         case 'FINISHED':
           return (
             <HStack>
-              <ActionButton
+              <ActionButtonComponent
                 icon={<CheckIcon />}
                 colorScheme="green"
                 text="Als opgehaald markeren"
               />
-              <EditButton />
-              <DeleteButton />
+              <EditButtonComponent />
+              <DeleteButtonComponent />
             </HStack>
           );
         case 'COLLECTED':
           return (
             <HStack>
-              <ActionButton
+              <ActionButtonComponent
                 icon={<UnlockIcon />}
                 colorScheme="gray"
                 text="Volgnummer vrijgeven"
               />
-              <EditButton />
-              <DeleteButton />
+              <EditButtonComponent />
+              <DeleteButtonComponent />
             </HStack>
           );
         case 'UNKNOWN':
         default:
           return (
             <HStack>
-              <DeleteButton />
+              <DeleteButtonComponent />
             </HStack>
           );
       }
@@ -213,7 +213,7 @@ const columns = [
       switch (info.getValue()) {
         case 'SUCCESS':
           return (
-            <ExpandableReparationTag
+            <ExpandableReparationTagComponent
               colorScheme="green"
               icon={<CheckIcon />}
               text="Reparatie gelukt"
@@ -221,7 +221,7 @@ const columns = [
           );
         case 'PARTIAL':
           return (
-            <ExpandableReparationTag
+            <ExpandableReparationTagComponent
               colorScheme="yellow"
               icon={<MinusIcon />}
               text="Reparatie gedeeltelijk gelukt"
@@ -229,7 +229,7 @@ const columns = [
           );
         case 'FAIL':
           return (
-            <ExpandableReparationTag
+            <ExpandableReparationTagComponent
               colorScheme="red"
               icon={<CloseIcon />}
               text="Reparatie mislukt"
@@ -238,7 +238,7 @@ const columns = [
         case 'UNKNOWN':
         default:
           return (
-            <ExpandableReparationTag
+            <ExpandableReparationTagComponent
               colorScheme="gray"
               icon={<QuestionIcon />}
               text="Status onbekend"
@@ -258,7 +258,7 @@ const Home = () => {
   );
 };
 
-function ActionButton({
+function ActionButtonComponent({
   colorScheme,
   icon,
   text,
@@ -280,7 +280,7 @@ function ActionButton({
   );
 }
 
-function EditButton() {
+function EditButtonComponent() {
   return (
     <NextLink href="/admin/reparation" passHref>
       <IconButton
@@ -296,7 +296,7 @@ function EditButton() {
   );
 }
 
-function DeleteButton() {
+function DeleteButtonComponent() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const cancelRef = React.useRef(null);
 
@@ -349,7 +349,7 @@ function DeleteButton() {
   );
 }
 
-function ExpandableReparationTag({
+function ExpandableReparationTagComponent({
   colorScheme,
   icon,
   text,

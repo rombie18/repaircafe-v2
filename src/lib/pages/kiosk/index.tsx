@@ -20,7 +20,7 @@ const Home = () => {
     <Box display="flex" flexDirection="column">
       <Box flex="1" display="flex" gap={6}>
         <Box flex="1" py="4">
-          <TokenGrid
+          <TokenGridComponent
             reparations={REPARATIONS.filter(
               (reparation) => reparation.state_cycle === 'PENDING'
             )}
@@ -31,7 +31,7 @@ const Home = () => {
         </Box>
 
         <Box flex="1" py="4">
-          <TokenGrid
+          <TokenGridComponent
             reparations={REPARATIONS.filter(
               (reparation) => reparation.state_cycle === 'FINISHED'
             )}
@@ -43,7 +43,7 @@ const Home = () => {
       </Box>
 
       <Box pt="4">
-        <TokenMarquee
+        <TokenMarqueeComponent
           reparations={REPARATIONS.filter(
             (reparation) => reparation.state_cycle === 'QUEUED'
           )}
@@ -55,7 +55,7 @@ const Home = () => {
   );
 };
 
-function TokenGrid({
+function TokenGridComponent({
   reparations,
   icon,
   color,
@@ -125,7 +125,7 @@ function TokenGrid({
   );
 }
 
-function TokenMarquee({
+function TokenMarqueeComponent({
   reparations,
   color,
   heading,

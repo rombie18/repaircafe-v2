@@ -32,6 +32,51 @@ import {
 } from '@chakra-ui/react';
 import { REPARATIONS } from '~/lib/firebase/sample_data';
 
+const Home = () => {
+  const reparation = REPARATIONS[2];
+
+  return (
+    <>
+      <VStack paddingY={6} align="start">
+        <Heading>Volg je toestel</Heading>
+        <Text>
+          Nadat je je toestel hebt binnengebracht bij onze stand, kan je in
+          real-time de reparatie volgen. Dit kan eenvoudig door in onderstaand
+          formulier je gegevens in te vullen die je bij afgifte achter liet.
+        </Text>
+      </VStack>
+
+      <Flex
+        direction="row"
+        alignItems="center"
+        justifyContent="center"
+        minHeight="50vh"
+        gap={4}
+        mb={8}
+        flex={1}
+      >
+        <VStack w="100%" spacing={10} marginY={10}>
+          <ReparationStepsComponent reparation={reparation} />
+
+          <FormControl>
+            <FormLabel>Toestand herstelling</FormLabel>
+            <ReparationTagComponent reparation={reparation} />
+          </FormControl>
+
+          <FormControl>
+            <FormLabel>Opmerkingen</FormLabel>
+            <Textarea isDisabled value={reparation.remarks} />
+            <FormHelperText>
+              Als de technieker of een medewerker opmerkingen heeft
+              achtergelaten, kan je deze in bovenstaand vak lezen.
+            </FormHelperText>
+          </FormControl>
+        </VStack>
+      </Flex>
+    </>
+  );
+};
+
 function ReparationStepsComponent({ reparation }: { reparation: Reparation }) {
   const steps = [
     {
@@ -108,7 +153,7 @@ function ReparationStepsComponent({ reparation }: { reparation: Reparation }) {
   );
 }
 
-function ReparationTag({ reparation }: { reparation: Reparation }) {
+function ReparationTagComponent({ reparation }: { reparation: Reparation }) {
   switch (reparation.state_reparation) {
     case 'SUCCESS':
       return (
@@ -141,50 +186,5 @@ function ReparationTag({ reparation }: { reparation: Reparation }) {
       );
   }
 }
-
-const Home = () => {
-  const reparation = REPARATIONS[2];
-
-  return (
-    <>
-      <VStack paddingY={6} align="start">
-        <Heading>Volg je toestel</Heading>
-        <Text>
-          Nadat je je toestel hebt binnengebracht bij onze stand, kan je in
-          real-time de reparatie volgen. Dit kan eenvoudig door in onderstaand
-          formulier je gegevens in te vullen die je bij afgifte achter liet.
-        </Text>
-      </VStack>
-
-      <Flex
-        direction="row"
-        alignItems="center"
-        justifyContent="center"
-        minHeight="50vh"
-        gap={4}
-        mb={8}
-        flex={1}
-      >
-        <VStack w="100%" spacing={10} marginY={10}>
-          <ReparationStepsComponent reparation={reparation} />
-
-          <FormControl>
-            <FormLabel>Toestand herstelling</FormLabel>
-            <ReparationTag reparation={reparation} />
-          </FormControl>
-
-          <FormControl>
-            <FormLabel>Opmerkingen</FormLabel>
-            <Textarea isDisabled>{reparation.remarks}</Textarea>
-            <FormHelperText>
-              Als de technieker of een medewerker opmerkingen heeft
-              achtergelaten, kan je deze in bovenstaand vak lezen.
-            </FormHelperText>
-          </FormControl>
-        </VStack>
-      </Flex>
-    </>
-  );
-};
 
 export default Home;

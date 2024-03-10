@@ -36,36 +36,42 @@ const Home = () => {
         mb={8}
         flex={1}
       >
-        <VStack w="100%" spacing={10} marginY={10}>
-          <VStack w="100%" spacing={4}>
-            <FormControl>
-              <FormLabel>E-mailadres</FormLabel>
-              <Input type="email" placeholder="jan.peeters@telenet.be" />
-              <FormHelperText>
-                Het e-mailadres dat je bij de registratie opgaf.
-              </FormHelperText>
-            </FormControl>
-
-            <FormControl>
-              <FormLabel>Volgnummer</FormLabel>
-              <HStack>
-                <PinInput type="alphanumeric">
-                  <PinInputField />
-                  <PinInputField />
-                  <PinInputField />
-                </PinInput>
-              </HStack>
-              <FormHelperText>
-                De volgnummer die je bij afgifte ontving.
-              </FormHelperText>
-            </FormControl>
-          </VStack>
-
-          <Button w="100%">Zoeken</Button>
-        </VStack>
+        <TrackFormComponent />
       </Flex>
     </>
   );
 };
+
+function TrackFormComponent() {
+  return (
+    <VStack w="100%" spacing={10} marginY={10}>
+      <VStack w="100%" spacing={4}>
+        <FormControl>
+          <FormLabel>E-mailadres</FormLabel>
+          <Input type="email" placeholder="jan.peeters@telenet.be" />
+          <FormHelperText>
+            Het e-mailadres dat je bij de registratie opgaf.
+          </FormHelperText>
+        </FormControl>
+
+        <FormControl>
+          <FormLabel>Volgnummer</FormLabel>
+          <HStack>
+            <PinInput type="alphanumeric">
+              <PinInputField />
+              <PinInputField />
+              <PinInputField />
+            </PinInput>
+          </HStack>
+          <FormHelperText>
+            De volgnummer die je bij afgifte ontving.
+          </FormHelperText>
+        </FormControl>
+      </VStack>
+
+      <Button w="100%">Zoeken</Button>
+    </VStack>
+  );
+}
 
 export default Home;
