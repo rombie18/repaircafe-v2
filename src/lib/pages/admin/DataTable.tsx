@@ -1,4 +1,3 @@
-import * as React from 'react';
 import {
   Table,
   Thead,
@@ -8,23 +7,19 @@ import {
   Td,
   chakra,
   VStack,
-  Input,
-  Button,
-  InputGroup,
-  InputRightElement,
 } from '@chakra-ui/react';
 import { TriangleDownIcon, TriangleUpIcon } from '@chakra-ui/icons';
+import { rankItem } from '@tanstack/match-sorter-utils';
 import {
   useReactTable,
   flexRender,
   getCoreRowModel,
-  ColumnDef,
-  SortingState,
   getSortedRowModel,
-  FilterFn,
   getFilteredRowModel,
 } from '@tanstack/react-table';
-import { rankItem } from '@tanstack/match-sorter-utils';
+import type { ColumnDef, SortingState, FilterFn } from '@tanstack/react-table';
+import DebouncedInputComponent from '~/lib/components/DebouncedInput';
+import { useState } from 'react';
 
 export type DataTableProps<Data extends object> = {
   data: Data[];
@@ -35,8 +30,8 @@ export function DataTable<Data extends object>({
   data,
   columns,
 }: DataTableProps<Data>) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = React.useState('');
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [globalFilter, setGlobalFilter] = useState('');
 
   const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
     // Rank the item
@@ -71,7 +66,7 @@ export function DataTable<Data extends object>({
 
   return (
     <VStack spacing={6}>
-      <DebouncedInput
+      <DebouncedInputComponent
         placeholder="Typ om te zoeken..."
         value={globalFilter ?? ''}
         onChange={(value) => setGlobalFilter(String(value))}
@@ -126,45 +121,5 @@ export function DataTable<Data extends object>({
         </Tbody>
       </Table>
     </VStack>
-  );
-}
-
-function DebouncedInput({
-  value: initialValue,
-  onChange,
-  debounce = 250,
-  placeholder,
-}: {
-  value: string | number;
-  onChange: (value: string | number) => void;
-  debounce?: number;
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'>) {
-  const [value, setValue] = React.useState(initialValue);
-
-  React.useEffect(() => {
-    setValue(initialValue);
-  }, [initialValue]);
-
-  React.useEffect(() => {
-    const timeout = setTimeout(() => {
-      onChange(value);
-    }, debounce);
-
-    return () => clearTimeout(timeout);
-  }, [value]);
-
-  return (
-    <InputGroup>
-      <Input
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-      />
-      <InputRightElement width="6rem" mr="0.5rem">
-        <Button h="1.75rem" size="sm" onClick={(e) => setValue('')}>
-          Leegmaken
-        </Button>
-      </InputRightElement>
-    </InputGroup>
   );
 }

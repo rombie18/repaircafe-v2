@@ -3,8 +3,6 @@ import {
   Button,
   Heading,
   Image,
-  Text,
-  Link as ChakraLink,
   Flex,
 } from '@chakra-ui/react';
 import Link from 'next/link';
