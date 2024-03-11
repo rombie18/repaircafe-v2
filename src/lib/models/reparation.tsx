@@ -1,9 +1,11 @@
-type ReparationEvent = {
+import type { Timestamp } from 'firebase/firestore';
+
+export type ReparationEvent = {
   state_cycle: string;
-  timestamp: Date;
+  timestamp: Timestamp;
 };
 
-type Reparation = {
+export type Reparation = {
   _id: string;
   events: ReparationEvent[];
   item_id: string;

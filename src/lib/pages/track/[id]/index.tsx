@@ -12,7 +12,6 @@ import {
   FormControl,
   FormHelperText,
   FormLabel,
-  HStack,
   Heading,
   Step,
   StepDescription,
@@ -30,51 +29,74 @@ import {
   VStack,
   useSteps,
 } from '@chakra-ui/react';
-import { REPARATIONS } from '~/lib/firebase/sample_data';
+import { onSnapshot, doc } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { db } from '~/lib/firebase/config';
+import { Reparation } from '~/lib/models/reparation';
 
-const Home = () => {
-  const reparation = REPARATIONS[2];
+const Home = ({ params }: any) => {
+  const { id } = params;
+  const [reparation, setReparation] = useState<Reparation>();
 
-  return (
-    <>
-      <VStack paddingY={6} align="start">
-        <Heading>Volg je toestel</Heading>
-        <Text>
-          Nadat je je toestel hebt binnengebracht bij onze stand, kan je in
-          real-time de reparatie volgen. Dit kan eenvoudig door in onderstaand
-          formulier je gegevens in te vullen die je bij afgifte achter liet.
-        </Text>
-      </VStack>
+  const getReparation = (setReparation: any) => {
+    try {
+      const unsub = onSnapshot(doc(db, 'reparations', id), (doc: any) => {
+        const document: Reparation = { _id: doc.id, ...doc.data() };
+        setReparation(document);
+      });
+    } catch (err) {
+      //TODO handle error
+      console.error(err);
+      setReparation();
+    }
+  };
 
-      <Flex
-        direction="row"
-        alignItems="center"
-        justifyContent="center"
-        minHeight="50vh"
-        gap={4}
-        mb={8}
-        flex={1}
-      >
-        <VStack w="100%" spacing={10} marginY={10}>
-          <ReparationStepsComponent reparation={reparation} />
+  useEffect(() => getReparation(setReparation), []);
 
-          <FormControl>
-            <FormLabel>Toestand herstelling</FormLabel>
-            <ReparationTagComponent reparation={reparation} />
-          </FormControl>
-
-          <FormControl>
-            <FormLabel>Opmerkingen</FormLabel>
-            <Textarea isDisabled value={reparation.remarks} />
-            <FormHelperText>
-              Als de technieker of een medewerker opmerkingen heeft
-              achtergelaten, kan je deze in bovenstaand vak lezen.
-            </FormHelperText>
-          </FormControl>
+  if (reparation) {
+    return (
+      <>
+        <VStack paddingY={6} align="start">
+          <Heading>Volg je toestel</Heading>
+          <Text>
+            Nadat je je toestel hebt binnengebracht bij onze stand, kan je in
+            real-time de reparatie volgen. Dit kan eenvoudig door in onderstaand
+            formulier je gegevens in te vullen die je bij afgifte achter liet.
+          </Text>
         </VStack>
-      </Flex>
-    </>
-  );
+
+        <Flex
+          direction="row"
+          alignItems="center"
+          justifyContent="center"
+          minHeight="50vh"
+          gap={4}
+          mb={8}
+          flex={1}
+        >
+          <VStack w="100%" spacing={10} marginY={10}>
+            <ReparationStepsComponent reparation={reparation} />
+
+            <FormControl>
+              <FormLabel>Toestand herstelling</FormLabel>
+              <ReparationTagComponent reparation={reparation} />
+            </FormControl>
+
+            <FormControl>
+              <FormLabel>Opmerkingen</FormLabel>
+              <Textarea isDisabled value={reparation.remarks} />
+              <FormHelperText>
+                Als de technieker of een medewerker opmerkingen heeft
+                achtergelaten, kan je deze in bovenstaand vak lezen.
+              </FormHelperText>
+            </FormControl>
+          </VStack>
+        </Flex>
+      </>
+    );
+  } else {
+    <Text>Laden...</Text>;
+  }
 };
 
 function ReparationStepsComponent({ reparation }: { reparation: Reparation }) {
@@ -116,12 +138,16 @@ function ReparationStepsComponent({ reparation }: { reparation: Reparation }) {
     },
   ];
 
-  const { activeStep } = useSteps({
-    index: steps.findIndex(
-      (step) => step.state_cycle === reparation.state_cycle
-    ),
+  const { activeStep, setActiveStep } = useSteps({
     count: steps.length,
   });
+
+  useEffect(() => {
+    const newIndex = steps.findIndex(
+      (step) => step.state_cycle === reparation.state_cycle
+    );
+    setActiveStep(newIndex);
+  }, [reparation, steps, setActiveStep]);
 
   return (
     <Stepper

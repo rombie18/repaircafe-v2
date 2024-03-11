@@ -25,26 +25,48 @@ import {
   Box,
   Button,
   Collapse,
+  FormControl,
+  FormHelperText,
+  FormLabel,
   HStack,
   IconButton,
+  Input,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
   Tag,
+  TagLabel,
+  Textarea,
+  chakra,
   useDisclosure,
+  useRadio,
+  useRadioGroup,
+  Text,
 } from '@chakra-ui/react';
 import { createColumnHelper } from '@tanstack/react-table';
 import { DataTable } from './DataTable';
 import { DateTime } from 'luxon';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import NextLink from 'next/link';
-import { REPARATIONS } from '~/lib/firebase/sample_data';
+import {
+  onSnapshot,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  runTransaction,
+  updateDoc,
+} from 'firebase/firestore';
+import { db } from '~/lib/firebase/config';
+import { Reparation } from '~/lib/models/reparation';
 
 const columnHelper = createColumnHelper<Reparation>();
 
 const columns = [
-  columnHelper.accessor('_id', {
-    id: '_id',
-    cell: (info) => info.getValue(),
-    header: 'ID',
-  }),
   columnHelper.accessor('token', {
     id: 'token',
     cell: (info) => {
@@ -59,7 +81,9 @@ const columns = [
         .getValue()
         .filter((event) => event.state_cycle === 'DEPOSITED')[0];
       if (event) {
-        return DateTime.fromJSDate(event.timestamp).toFormat("H'u'mm");
+        return DateTime.fromJSDate(event.timestamp.toDate())
+          .setLocale('nl')
+          .toFormat("d MMM',' H'u'mm");
       } else {
         return '';
       }
@@ -121,86 +145,92 @@ const columns = [
     id: 'actions',
     cell: (props) => {
       const state_cycle: string = props.row.getValue('state_cycle');
-      // const id: string = props.row.getValue('_id');
+      const reparation: Reparation = props.row.original;
 
       switch (state_cycle) {
         case 'REGISTERED':
           return (
             <HStack>
-              <ActionButtonComponent
+              <SetDepositedActionButtonComponent
+                reparation={reparation}
                 icon={<DownloadIcon />}
                 colorScheme="gray"
                 text="In ontvangst nemen"
               />
               <EditButtonComponent />
-              <DeleteButtonComponent />
+              <DeleteButtonComponent reparation={reparation} />
             </HStack>
           );
         case 'DEPOSITED':
           return (
             <HStack>
-              <ActionButtonComponent
+              <SetQueuedActionButtonComponent
+                reparation={reparation}
                 icon={<SpinnerIcon />}
                 colorScheme="red"
                 text="In wachtrij zetten"
               />
               <EditButtonComponent />
-              <DeleteButtonComponent />
+              <DeleteButtonComponent reparation={reparation} />
             </HStack>
           );
         case 'QUEUED':
           return (
             <HStack>
-              <ActionButtonComponent
+              <SetPendingActionButtonComponent
+                reparation={reparation}
                 icon={<SettingsIcon />}
                 colorScheme="yellow"
                 text="Reparatie starten"
               />
               <EditButtonComponent />
-              <DeleteButtonComponent />
+              <DeleteButtonComponent reparation={reparation} />
             </HStack>
           );
         case 'PENDING':
           return (
             <HStack>
-              <ActionButtonComponent
+              <SetFinishedActionButtonComponent
+                reparation={reparation}
                 icon={<BellIcon />}
                 colorScheme="green"
                 text="Eigenaar oproepen"
               />
               <EditButtonComponent />
-              <DeleteButtonComponent />
+              <DeleteButtonComponent reparation={reparation} />
             </HStack>
           );
         case 'FINISHED':
           return (
             <HStack>
-              <ActionButtonComponent
+              <SetCollectedActionButtonComponent
+                reparation={reparation}
                 icon={<CheckIcon />}
                 colorScheme="green"
                 text="Als opgehaald markeren"
               />
               <EditButtonComponent />
-              <DeleteButtonComponent />
+              <DeleteButtonComponent reparation={reparation} />
             </HStack>
           );
         case 'COLLECTED':
           return (
             <HStack>
-              <ActionButtonComponent
+              <SetReleasedActionButtonComponent
+                reparation={reparation}
                 icon={<UnlockIcon />}
                 colorScheme="gray"
                 text="Volgnummer vrijgeven"
               />
               <EditButtonComponent />
-              <DeleteButtonComponent />
+              <DeleteButtonComponent reparation={reparation} />
             </HStack>
           );
         case 'UNKNOWN':
         default:
           return (
             <HStack>
-              <DeleteButtonComponent />
+              <DeleteButtonComponent reparation={reparation} />
             </HStack>
           );
       }
@@ -251,22 +281,55 @@ const columns = [
 ];
 
 const Home = () => {
+  const [reparations, setReparations] = useState<Reparation[]>([]);
+
+  const getReparations = (setReparations: any) => {
+    try {
+      const unsub = onSnapshot(collection(db, 'reparations'), (docs) => {
+        const documents: Reparation[] = [];
+        docs.forEach((document: any) => {
+          documents.push({ _id: document.id, ...document.data() });
+        });
+        setReparations(documents);
+      });
+    } catch (err) {
+      //TODO handle error
+      console.error(err);
+      setReparations([]);
+    }
+  };
+
+  useEffect(() => getReparations(setReparations), []);
+
   return (
     <Box overflowX={'auto'}>
-      <DataTable columns={columns} data={REPARATIONS} />
+      <DataTable columns={columns} data={reparations} />
     </Box>
   );
 };
 
-function ActionButtonComponent({
+function SetPendingActionButtonComponent({
+  reparation,
   colorScheme,
   icon,
   text,
 }: {
+  reparation: Reparation;
   colorScheme: string;
   icon: JSX.Element;
   text: string;
 }) {
+  const updateReparation = async () => {
+    //TODO handle errors
+    await runTransaction(db, async (transaction) => {
+      const documentReference = doc(db, 'reparations', reparation._id);
+      await transaction.update(documentReference, {
+        state_cycle: 'PENDING',
+      });
+      //TODO add event with state_cycle=PENDING and timestamp
+    });
+  };
+
   return (
     <Button
       w="100%"
@@ -274,9 +337,324 @@ function ActionButtonComponent({
       colorScheme={colorScheme}
       variant="solid"
       size="sm"
+      onClick={updateReparation}
     >
       {text}
     </Button>
+  );
+}
+
+function SetQueuedActionButtonComponent({
+  reparation,
+  colorScheme,
+  icon,
+  text,
+}: {
+  reparation: Reparation;
+  colorScheme: string;
+  icon: JSX.Element;
+  text: string;
+}) {
+  const updateReparation = async () => {
+    //TODO handle errors
+    await runTransaction(db, async (transaction) => {
+      const documentReference = doc(db, 'reparations', reparation._id);
+      await transaction.update(documentReference, {
+        state_cycle: 'QUEUED',
+      });
+      //TODO add event with state_cycle=QUEUED and timestamp
+    });
+  };
+
+  return (
+    <Button
+      w="100%"
+      leftIcon={icon}
+      colorScheme={colorScheme}
+      variant="solid"
+      size="sm"
+      onClick={updateReparation}
+    >
+      {text}
+    </Button>
+  );
+}
+
+function SetDepositedActionButtonComponent({
+  reparation,
+  colorScheme,
+  icon,
+  text,
+}: {
+  reparation: Reparation;
+  colorScheme: string;
+  icon: JSX.Element;
+  text: string;
+}) {
+  const updateReparation = async () => {
+    //TODO handle errors
+    await runTransaction(db, async (transaction) => {
+      const documentReference = doc(db, 'reparations', reparation._id);
+      await transaction.update(documentReference, {
+        token: 'TTT',
+        state_cycle: 'DEPOSITED',
+        state_token: 'RESERVED',
+      });
+      //TODO add event with state_cycle=DEPOSITED and timestamp
+      //TODO send mail with track link
+    });
+  };
+
+  return (
+    <Button
+      w="100%"
+      leftIcon={icon}
+      colorScheme={colorScheme}
+      variant="solid"
+      size="sm"
+      onClick={updateReparation}
+    >
+      {text}
+    </Button>
+  );
+}
+
+function SetReleasedActionButtonComponent({
+  reparation,
+  colorScheme,
+  icon,
+  text,
+}: {
+  reparation: Reparation;
+  colorScheme: string;
+  icon: JSX.Element;
+  text: string;
+}) {
+  const updateReparation = async () => {
+    //TODO handle errors
+    await runTransaction(db, async (transaction) => {
+      const documentReference = doc(db, 'reparations', reparation._id);
+      await transaction.update(documentReference, {
+        state_token: 'RELEASED',
+      });
+    });
+  };
+
+  return (
+    <Button
+      w="100%"
+      leftIcon={icon}
+      colorScheme={colorScheme}
+      variant="solid"
+      size="sm"
+      onClick={updateReparation}
+    >
+      {text}
+    </Button>
+  );
+}
+
+function SetCollectedActionButtonComponent({
+  reparation,
+  colorScheme,
+  icon,
+  text,
+}: {
+  reparation: Reparation;
+  colorScheme: string;
+  icon: JSX.Element;
+  text: string;
+}) {
+  const updateReparation = async () => {
+    //TODO handle errors
+    await runTransaction(db, async (transaction) => {
+      const documentReference = doc(db, 'reparations', reparation._id);
+      await transaction.update(documentReference, {
+        state_cycle: 'COLLECTED',
+      });
+      //TODO add event with state_cycle=COLLECTED and timestamp
+    });
+  };
+
+  return (
+    <Button
+      w="100%"
+      leftIcon={icon}
+      colorScheme={colorScheme}
+      variant="solid"
+      size="sm"
+      onClick={updateReparation}
+    >
+      {text}
+    </Button>
+  );
+}
+
+function SetFinishedActionButtonComponent({
+  reparation,
+  colorScheme,
+  icon,
+  text,
+}: {
+  reparation: Reparation;
+  colorScheme: string;
+  icon: JSX.Element;
+  text: string;
+}) {
+  const { isOpen, onOpen, onClose } = useDisclosure();
+
+  const radios = [
+    {
+      key: 'SUCCESS',
+      text: 'Reparatie gelukt',
+      colorScheme: 'green',
+      icon: <CheckIcon />,
+    },
+    {
+      key: 'PARTIAL',
+      text: 'Reparatie gedeeltelijk gelukt',
+      colorScheme: 'yellow',
+      icon: <MinusIcon />,
+    },
+    {
+      key: 'FAIL',
+      text: 'Reparatie niet gelukt',
+      colorScheme: 'red',
+      icon: <CloseIcon />,
+    },
+    {
+      key: 'UNKNOWN',
+      text: 'Status onbekend',
+      colorScheme: 'gray',
+      icon: <QuestionIcon />,
+    },
+  ];
+
+  const { value, getRadioProps, getRootProps } = useRadioGroup();
+  const [remarks, setRemarks] = useState<string>('');
+
+  const updateReparation = async () => {
+    //TODO handle errors
+    await runTransaction(db, async (transaction) => {
+      const documentReference = doc(db, 'reparations', reparation._id);
+      await transaction.update(documentReference, {
+        state_cycle: 'FINISHED',
+        state_reparation: value,
+        remarks: remarks,
+      });
+      //TODO add event with state_cycle=FINISHED and timestamp
+      //TODO send email to user
+    });
+    onClose();
+  };
+
+  return (
+    <>
+      <Button
+        w="100%"
+        leftIcon={icon}
+        colorScheme={colorScheme}
+        variant="solid"
+        size="sm"
+        onClick={onOpen}
+      >
+        {text}
+      </Button>
+
+      <Modal isOpen={isOpen} onClose={onClose} size={'lg'}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Reparatie voltooien</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <FormControl mt={4}>
+              <FormLabel>Reparatiestatus</FormLabel>
+              <HStack wrap={'wrap'}>
+                {radios.map((radio) => {
+                  return (
+                    <RadioReparationTagComponent
+                      key={radio.key}
+                      text={radio.text}
+                      colorScheme={radio.colorScheme}
+                      icon={radio.icon}
+                      {...getRadioProps({ value: radio.key })}
+                    />
+                  );
+                })}
+              </HStack>
+            </FormControl>
+
+            <FormControl mt={4}>
+              <FormLabel>Opmerkingen van technieker</FormLabel>
+              <Textarea
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+              />
+              <FormHelperText>
+                De eigenaar van het toestel kan deze opmerkingen lezen.
+              </FormHelperText>
+            </FormControl>
+
+            <FormControl mt={8}>
+              Opgelet, de eigenaar wordt opgeroepen via mail en op de schermen
+              om zich naar de balie te begeven.
+            </FormControl>
+          </ModalBody>
+
+          <ModalFooter>
+            <Button onClick={onClose}>Annuleren</Button>
+            <Button onClick={updateReparation} colorScheme="green" ml={3}>
+              Reparatie voltooien
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </>
+  );
+}
+
+function RadioReparationTagComponent(props: any) {
+  const { text, colorScheme, icon, ...radioProps } = props;
+  const { state, getInputProps, getRadioProps, htmlProps, getLabelProps } =
+    useRadio(radioProps);
+
+  return (
+    <chakra.label {...htmlProps} cursor="pointer">
+      <input {...getInputProps({})} hidden />
+      <Box
+        {...getRadioProps()}
+        shadow={
+          state.isChecked ? '0 0 5px 0px var(--chakra-colors-gray-500)' : 'none'
+        }
+        borderWidth={state.isChecked ? '1px' : 'none'}
+        borderColor={'white'}
+        rounded="full"
+      >
+        <ReparationTagComponent
+          text={text}
+          colorScheme={colorScheme}
+          icon={icon}
+          {...getLabelProps()}
+        />
+      </Box>
+    </chakra.label>
+  );
+}
+
+function ReparationTagComponent({
+  text,
+  colorScheme,
+  icon,
+}: {
+  text: string;
+  colorScheme: string;
+  icon: JSX.Element;
+}) {
+  return (
+    <Tag size="lg" colorScheme={colorScheme} borderRadius="full">
+      {icon}
+      <TagLabel ml={2}>{text}</TagLabel>
+    </Tag>
   );
 }
 
@@ -296,9 +674,18 @@ function EditButtonComponent() {
   );
 }
 
-function DeleteButtonComponent() {
+function DeleteButtonComponent({ reparation }: { reparation: Reparation }) {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const cancelRef = React.useRef(null);
+
+  const deleteReparation = async () => {
+    //TODO handle errors
+    await runTransaction(db, async (transaction) => {
+      await transaction.delete(doc(db, 'items', reparation.item_id));
+      await transaction.delete(doc(db, 'reparations', reparation._id));
+    });
+    onClose();
+  };
 
   return (
     <>
@@ -336,7 +723,7 @@ function DeleteButtonComponent() {
               <Button
                 leftIcon={<WarningTwoIcon />}
                 colorScheme="red"
-                onClick={() => console.error('Not implemented.')}
+                onClick={deleteReparation}
                 ml={3}
               >
                 Permanent verwijderen

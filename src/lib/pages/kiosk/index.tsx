@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckIcon, SettingsIcon, TimeIcon } from '@chakra-ui/icons';
+import { CheckIcon, SettingsIcon } from '@chakra-ui/icons';
 import {
   Badge,
   Box,
@@ -13,15 +13,36 @@ import {
 } from '@chakra-ui/react';
 import React, { useEffect, useRef, useState } from 'react';
 import Marquee from 'react-fast-marquee';
-import { REPARATIONS } from '~/lib/firebase/sample_data';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '~/lib/firebase/config';
+import { Reparation } from '~/lib/models/reparation';
 
 const Home = () => {
+  const [reparations, setReparations] = useState<Reparation[]>([]);
+
+  const getReparations = (setReparations: any) => {
+    try {
+      const unsub = onSnapshot(collection(db, 'reparations'), (doc) => {
+        const documents: Reparation[] = [];
+        doc.forEach((document: any) => {
+          documents.push({ _id: document.id, ...document.data() });
+        });
+        setReparations(documents);
+      });
+    } catch (err) {
+      console.error(err);
+      setReparations([]);
+    }
+  };
+
+  useEffect(() => getReparations(setReparations), []);
+
   return (
     <Box display="flex" flexDirection="column">
       <Box flex="1" display="flex" gap={6}>
         <Box flex="1" py="4">
           <TokenGridComponent
-            reparations={REPARATIONS.filter(
+            reparations={reparations.filter(
               (reparation) => reparation.state_cycle === 'PENDING'
             )}
             heading="Reparatie bezig"
@@ -32,7 +53,7 @@ const Home = () => {
 
         <Box flex="1" py="4">
           <TokenGridComponent
-            reparations={REPARATIONS.filter(
+            reparations={reparations.filter(
               (reparation) => reparation.state_cycle === 'FINISHED'
             )}
             heading="Reparatie voltooid"
@@ -44,7 +65,7 @@ const Home = () => {
 
       <Box pt="4">
         <TokenMarqueeComponent
-          reparations={REPARATIONS.filter(
+          reparations={reparations.filter(
             (reparation) => reparation.state_cycle === 'QUEUED'
           )}
           heading="Wachtrij:"
