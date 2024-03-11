@@ -30,7 +30,6 @@ import {
   FormLabel,
   HStack,
   IconButton,
-  Input,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -45,7 +44,7 @@ import {
   useDisclosure,
   useRadio,
   useRadioGroup,
-  Text,
+  useToast,
 } from '@chakra-ui/react';
 import { createColumnHelper } from '@tanstack/react-table';
 import { DataTable } from './DataTable';
@@ -55,26 +54,88 @@ import NextLink from 'next/link';
 import {
   onSnapshot,
   collection,
-  deleteDoc,
   doc,
   getDoc,
   runTransaction,
-  updateDoc,
+  arrayUnion,
+  getDocs,
+  query,
+  where,
 } from 'firebase/firestore';
 import { db } from '~/lib/firebase/config';
 import { Reparation } from '~/lib/models/reparation';
+import { FirebaseError } from 'firebase/app';
 
-const columnHelper = createColumnHelper<Reparation>();
+const columnHelper = createColumnHelper<{
+  item: Item;
+  reparation: Reparation;
+  user: User;
+}>();
 
 const columns = [
-  columnHelper.accessor('token', {
+  columnHelper.accessor('reparation.state_reparation', {
+    id: 'state_reparation',
+    cell: (info) => {
+      switch (info.getValue()) {
+        case 'SUCCESS':
+          return (
+            <ExpandableReparationTagComponent
+              colorScheme="green"
+              icon={<CheckIcon />}
+              text="Reparatie gelukt"
+            />
+          );
+        case 'PARTIAL':
+          return (
+            <ExpandableReparationTagComponent
+              colorScheme="yellow"
+              icon={<MinusIcon />}
+              text="Reparatie gedeeltelijk gelukt"
+            />
+          );
+        case 'FAIL':
+          return (
+            <ExpandableReparationTagComponent
+              colorScheme="red"
+              icon={<CloseIcon />}
+              text="Reparatie mislukt"
+            />
+          );
+        case 'UNKNOWN':
+        default:
+          return (
+            <ExpandableReparationTagComponent
+              colorScheme="gray"
+              icon={<QuestionIcon />}
+              text="Status onbekend"
+            />
+          );
+      }
+    },
+    header: '',
+  }),
+  columnHelper.accessor('reparation.token', {
     id: 'token',
     cell: (info) => {
       return <Badge fontSize="1rem">{info.getValue()}</Badge>;
     },
     header: 'Volgnummer',
   }),
-  columnHelper.accessor('events', {
+  columnHelper.accessor('item.name', {
+    id: 'name',
+    cell: (info) => {
+      return info.getValue();
+    },
+    header: 'Toestel',
+  }),
+  columnHelper.accessor('user.name', {
+    id: 'user',
+    cell: (info) => {
+      return info.getValue();
+    },
+    header: 'Eigenaar',
+  }),
+  columnHelper.accessor('reparation.events', {
     id: 'events',
     cell: (info) => {
       const event = info
@@ -90,7 +151,7 @@ const columns = [
     },
     header: 'Aangemeld',
   }),
-  columnHelper.accessor('state_cycle', {
+  columnHelper.accessor('reparation.state_cycle', {
     id: 'state_cycle',
     cell: (info) => {
       switch (info.getValue()) {
@@ -144,10 +205,9 @@ const columns = [
   columnHelper.display({
     id: 'actions',
     cell: (props) => {
-      const state_cycle: string = props.row.getValue('state_cycle');
-      const reparation: Reparation = props.row.original;
+      const reparation: Reparation = props.row.original.reparation;
 
-      switch (state_cycle) {
+      switch (reparation.state_cycle) {
         case 'REGISTERED':
           return (
             <HStack>
@@ -214,18 +274,36 @@ const columns = [
             </HStack>
           );
         case 'COLLECTED':
-          return (
-            <HStack>
-              <SetReleasedActionButtonComponent
-                reparation={reparation}
-                icon={<UnlockIcon />}
-                colorScheme="gray"
-                text="Volgnummer vrijgeven"
-              />
-              <EditButtonComponent />
-              <DeleteButtonComponent reparation={reparation} />
-            </HStack>
-          );
+          if (reparation.state_token === 'RESERVED') {
+            return (
+              <HStack>
+                <SetReleasedActionButtonComponent
+                  reparation={reparation}
+                  icon={<UnlockIcon />}
+                  colorScheme="gray"
+                  text="Volgnummer vrijgeven"
+                />
+                <EditButtonComponent />
+                <DeleteButtonComponent reparation={reparation} />
+              </HStack>
+            );
+          } else {
+            return (
+              <HStack>
+                <Button
+                  w="100%"
+                  colorScheme="gray"
+                  variant="solid"
+                  size="sm"
+                  isDisabled
+                >
+                  Afgehandeld!
+                </Button>
+                <EditButtonComponent />
+                <DeleteButtonComponent reparation={reparation} />
+              </HStack>
+            );
+          }
         case 'UNKNOWN':
         default:
           return (
@@ -237,73 +315,72 @@ const columns = [
     },
     header: 'Acties',
   }),
-  columnHelper.accessor('state_reparation', {
-    id: 'state_reparation',
-    cell: (info) => {
-      switch (info.getValue()) {
-        case 'SUCCESS':
-          return (
-            <ExpandableReparationTagComponent
-              colorScheme="green"
-              icon={<CheckIcon />}
-              text="Reparatie gelukt"
-            />
-          );
-        case 'PARTIAL':
-          return (
-            <ExpandableReparationTagComponent
-              colorScheme="yellow"
-              icon={<MinusIcon />}
-              text="Reparatie gedeeltelijk gelukt"
-            />
-          );
-        case 'FAIL':
-          return (
-            <ExpandableReparationTagComponent
-              colorScheme="red"
-              icon={<CloseIcon />}
-              text="Reparatie mislukt"
-            />
-          );
-        case 'UNKNOWN':
-        default:
-          return (
-            <ExpandableReparationTagComponent
-              colorScheme="gray"
-              icon={<QuestionIcon />}
-              text="Status onbekend"
-            />
-          );
-      }
-    },
-    header: '',
-  }),
 ];
 
+//TODO deduplicate firebase requests and enable caching
 const Home = () => {
-  const [reparations, setReparations] = useState<Reparation[]>([]);
+  const toast = useToast();
+  const [data, setData] = useState<
+    { item: Item; reparation: Reparation; user: User }[]
+  >([]);
 
-  const getReparations = (setReparations: any) => {
-    try {
-      const unsub = onSnapshot(collection(db, 'reparations'), (docs) => {
-        const documents: Reparation[] = [];
-        docs.forEach((document: any) => {
-          documents.push({ _id: document.id, ...document.data() });
+  const getData = (setData: any) => {
+    onSnapshot(
+      collection(db, 'reparations'),
+      async (docs) => {
+        const documents: { item: Item; reparation: Reparation; user: User }[] =
+          [];
+
+        await Promise.all(
+          docs.docs.map(async (document: any) => {
+            const reparation: Reparation = {
+              _id: document.id,
+              ...document.data(),
+            };
+            const itemSnapshot = await getDoc(
+              doc(db, 'items', reparation.item_id)
+            );
+            const itemData: any = itemSnapshot.data();
+            const item: Item = { _id: itemSnapshot.id, ...itemData };
+            const userSnapshot = await getDoc(doc(db, 'users', item.user_id));
+            const userData: any = userSnapshot.data();
+            const user: User = {
+              _id: userSnapshot.id,
+              ...userData,
+              name: `${userData.first_name} ${userData.last_name}`,
+            };
+
+            documents.push({
+              item: item,
+              reparation: reparation,
+              user: user,
+            });
+          })
+        );
+
+        setData(documents);
+      },
+      (error) => {
+        let code = 'unknown';
+        error instanceof FirebaseError && (code = error.code);
+
+        console.error(error);
+        toast({
+          title: `Oeps!`,
+          description: `Er liep iets mis bij het ophalen van gegevens. (${code})`,
+          status: 'error',
+          isClosable: true,
+          duration: 10000,
         });
-        setReparations(documents);
-      });
-    } catch (err) {
-      //TODO handle error
-      console.error(err);
-      setReparations([]);
-    }
+      }
+    );
   };
 
-  useEffect(() => getReparations(setReparations), []);
+  useEffect(() => getData(setData), []);
 
   return (
     <Box overflowX={'auto'}>
-      <DataTable columns={columns} data={reparations} />
+      <DataTable columns={columns} data={data} />
     </Box>
   );
 };
@@ -319,15 +396,34 @@ function SetPendingActionButtonComponent({
   icon: JSX.Element;
   text: string;
 }) {
+  const toast = useToast();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const updateReparation = async () => {
-    //TODO handle errors
+    setIsLoading(true);
     await runTransaction(db, async (transaction) => {
       const documentReference = doc(db, 'reparations', reparation._id);
       await transaction.update(documentReference, {
         state_cycle: 'PENDING',
+        events: arrayUnion({
+          state_cycle: 'PENDING',
+          timestamp: new Date(),
+        }),
       });
-      //TODO add event with state_cycle=PENDING and timestamp
-    });
+    })
+      .catch((error) => {
+        let code = 'unknown';
+        error instanceof FirebaseError && (code = error.code);
+
+        console.error(error);
+        toast({
+          title: `Oeps!`,
+          description: `Er liep iets mis bij het updaten van een item. (${code})`,
+          status: 'error',
+          isClosable: true,
+          duration: 10000,
+        });
+      })
+      .finally(() => setIsLoading(false));
   };
 
   return (
@@ -338,6 +434,7 @@ function SetPendingActionButtonComponent({
       variant="solid"
       size="sm"
       onClick={updateReparation}
+      isLoading={isLoading}
     >
       {text}
     </Button>
@@ -355,15 +452,35 @@ function SetQueuedActionButtonComponent({
   icon: JSX.Element;
   text: string;
 }) {
+  const toast = useToast();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const updateReparation = async () => {
-    //TODO handle errors
+    setIsLoading(true);
     await runTransaction(db, async (transaction) => {
       const documentReference = doc(db, 'reparations', reparation._id);
       await transaction.update(documentReference, {
         state_cycle: 'QUEUED',
+        events: arrayUnion({
+          state_cycle: 'QUEUED',
+          timestamp: new Date(),
+        }),
       });
-      //TODO add event with state_cycle=QUEUED and timestamp
-    });
+    })
+      .catch((error) => {
+        let code = 'unknown';
+        error instanceof FirebaseError && (code = error.code);
+
+        console.error(error);
+        toast({
+          title: `Oeps!`,
+          description: `Er liep iets mis bij het updaten van een item. (${code})`,
+          status: 'error',
+          isClosable: true,
+          duration: 10000,
+        });
+      })
+      .finally(() => setIsLoading(false));
   };
 
   return (
@@ -374,6 +491,7 @@ function SetQueuedActionButtonComponent({
       variant="solid"
       size="sm"
       onClick={updateReparation}
+      isLoading={isLoading}
     >
       {text}
     </Button>
@@ -391,18 +509,52 @@ function SetDepositedActionButtonComponent({
   icon: JSX.Element;
   text: string;
 }) {
+  const toast = useToast();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const updateReparation = async () => {
-    //TODO handle errors
+    setIsLoading(true);
     await runTransaction(db, async (transaction) => {
+      const reservedTokens: Set<string> = new Set();
+
+      const collectionReference = collection(db, 'reparations');
+      const tokensQuery = query(
+        collectionReference,
+        where('state_token', '==', 'RESERVED')
+      );
+      const tokensQuerySnapshot = await getDocs(tokensQuery);
+      tokensQuerySnapshot.forEach((doc: any) => {
+        reservedTokens.add(doc.data().token);
+      });
+
+      const generatedtoken = generateRandomToken(reservedTokens);
+
       const documentReference = doc(db, 'reparations', reparation._id);
       await transaction.update(documentReference, {
-        token: 'TTT',
+        token: generatedtoken,
         state_cycle: 'DEPOSITED',
         state_token: 'RESERVED',
+        events: arrayUnion({
+          state_cycle: 'DEPOSITED',
+          timestamp: new Date(),
+        }),
       });
-      //TODO add event with state_cycle=DEPOSITED and timestamp
       //TODO send mail with track link
-    });
+    })
+      .catch((error) => {
+        let code = 'unknown';
+        error instanceof FirebaseError && (code = error.code);
+
+        console.error(error);
+        toast({
+          title: `Oeps!`,
+          description: `Er liep iets mis bij het updaten van een item. (${code})`,
+          status: 'error',
+          isClosable: true,
+          duration: 10000,
+        });
+      })
+      .finally(() => setIsLoading(false));
   };
 
   return (
@@ -413,6 +565,7 @@ function SetDepositedActionButtonComponent({
       variant="solid"
       size="sm"
       onClick={updateReparation}
+      isLoading={isLoading}
     >
       {text}
     </Button>
@@ -430,14 +583,31 @@ function SetReleasedActionButtonComponent({
   icon: JSX.Element;
   text: string;
 }) {
+  const toast = useToast();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const updateReparation = async () => {
-    //TODO handle errors
+    setIsLoading(true);
     await runTransaction(db, async (transaction) => {
       const documentReference = doc(db, 'reparations', reparation._id);
       await transaction.update(documentReference, {
         state_token: 'RELEASED',
       });
-    });
+    })
+      .catch((error) => {
+        let code = 'unknown';
+        error instanceof FirebaseError && (code = error.code);
+
+        console.error(error);
+        toast({
+          title: `Oeps!`,
+          description: `Er liep iets mis bij het updaten van een item. (${code})`,
+          status: 'error',
+          isClosable: true,
+          duration: 10000,
+        });
+      })
+      .finally(() => setIsLoading(false));
   };
 
   return (
@@ -448,6 +618,7 @@ function SetReleasedActionButtonComponent({
       variant="solid"
       size="sm"
       onClick={updateReparation}
+      isLoading={isLoading}
     >
       {text}
     </Button>
@@ -465,15 +636,35 @@ function SetCollectedActionButtonComponent({
   icon: JSX.Element;
   text: string;
 }) {
+  const toast = useToast();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const updateReparation = async () => {
-    //TODO handle errors
+    setIsLoading(true);
     await runTransaction(db, async (transaction) => {
       const documentReference = doc(db, 'reparations', reparation._id);
       await transaction.update(documentReference, {
         state_cycle: 'COLLECTED',
+        events: arrayUnion({
+          state_cycle: 'COLLECTED',
+          timestamp: new Date(),
+        }),
       });
-      //TODO add event with state_cycle=COLLECTED and timestamp
-    });
+    })
+      .catch((error) => {
+        let code = 'unknown';
+        error instanceof FirebaseError && (code = error.code);
+
+        console.error(error);
+        toast({
+          title: `Oeps!`,
+          description: `Er liep iets mis bij het updaten van een item. (${code})`,
+          status: 'error',
+          isClosable: true,
+          duration: 10000,
+        });
+      })
+      .finally(() => setIsLoading(false));
   };
 
   return (
@@ -484,6 +675,7 @@ function SetCollectedActionButtonComponent({
       variant="solid"
       size="sm"
       onClick={updateReparation}
+      isLoading={isLoading}
     >
       {text}
     </Button>
@@ -501,8 +693,6 @@ function SetFinishedActionButtonComponent({
   icon: JSX.Element;
   text: string;
 }) {
-  const { isOpen, onOpen, onClose } = useDisclosure();
-
   const radios = [
     {
       key: 'SUCCESS',
@@ -530,21 +720,41 @@ function SetFinishedActionButtonComponent({
     },
   ];
 
+  const toast = useToast();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const { isOpen, onOpen, onClose } = useDisclosure();
   const { value, getRadioProps, getRootProps } = useRadioGroup();
   const [remarks, setRemarks] = useState<string>('');
 
   const updateReparation = async () => {
-    //TODO handle errors
+    setIsLoading(true);
     await runTransaction(db, async (transaction) => {
       const documentReference = doc(db, 'reparations', reparation._id);
       await transaction.update(documentReference, {
         state_cycle: 'FINISHED',
         state_reparation: value,
         remarks: remarks,
+        events: arrayUnion({
+          state_cycle: 'FINISHED',
+          timestamp: new Date(),
+        }),
       });
-      //TODO add event with state_cycle=FINISHED and timestamp
       //TODO send email to user
-    });
+    })
+      .catch((error) => {
+        let code = 'unknown';
+        error instanceof FirebaseError && (code = error.code);
+
+        console.error(error);
+        toast({
+          title: `Oeps!`,
+          description: `Er liep iets mis bij het updaten van een item. (${code})`,
+          status: 'error',
+          isClosable: true,
+          duration: 10000,
+        });
+      })
+      .finally(() => setIsLoading(false));
     onClose();
   };
 
@@ -557,6 +767,7 @@ function SetFinishedActionButtonComponent({
         variant="solid"
         size="sm"
         onClick={onOpen}
+        isLoading={isLoading}
       >
         {text}
       </Button>
@@ -611,6 +822,29 @@ function SetFinishedActionButtonComponent({
       </Modal>
     </>
   );
+}
+
+function generateRandomToken(reservedTokens: Set<string>): string {
+  let randomToken;
+
+  if (reservedTokens.size == 2600) {
+    throw new FirebaseError(
+      'no-tokens-available',
+      'Er zijn geen vrije volgnummers beschikbaar. Alle 2600 nummers zijn in gebruik.'
+    );
+  }
+
+  do {
+    const randomLetter = String.fromCharCode(
+      65 + Math.floor(Math.random() * 26)
+    );
+    const randomDigits = Math.floor(Math.random() * 100)
+      .toString()
+      .padStart(2, '0');
+    randomToken = `${randomLetter}${randomDigits}`;
+  } while (reservedTokens.has(randomToken));
+
+  return randomToken;
 }
 
 function RadioReparationTagComponent(props: any) {
@@ -675,14 +909,26 @@ function EditButtonComponent() {
 }
 
 function DeleteButtonComponent({ reparation }: { reparation: Reparation }) {
+  const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const cancelRef = React.useRef(null);
 
   const deleteReparation = async () => {
-    //TODO handle errors
     await runTransaction(db, async (transaction) => {
       await transaction.delete(doc(db, 'items', reparation.item_id));
       await transaction.delete(doc(db, 'reparations', reparation._id));
+    }).catch((error) => {
+      let code = 'unknown';
+      error instanceof FirebaseError && (code = error.code);
+
+      console.error(error);
+      toast({
+        title: `Oeps!`,
+        description: `Er liep iets mis bij het updaten van een item. (${code})`,
+        status: 'error',
+        isClosable: true,
+        duration: 10000,
+      });
     });
     onClose();
   };

@@ -24,6 +24,8 @@ import {
 } from 'firebase/firestore';
 import { db } from '~/lib/firebase/config';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { FirebaseError } from 'firebase/app';
 
 const Home = () => {
   return (
@@ -55,72 +57,95 @@ const Home = () => {
 function TrackFormComponent() {
   const { push } = useRouter();
 
-  async function track(form_data: { mail: string; token: string }) {
-    try {
-      await runTransaction(db, async (transaction) => {
-        let userId: string = '';
-        let reparations: Record<string, string> = {};
+  const handleSubmit = async (
+    values: { mail: string; token: string },
+    { setStatus, resetForm }: { setStatus: Function; resetForm: Function }
+  ) => {
+    setStatus();
+    await runTransaction(db, async (transaction) => {
+      let userId: string = '';
+      let reparations: Record<string, string> = {};
 
-        const itemIds_from_token: string[] = [];
-        const itemIds_from_user: string[] = [];
+      const itemIdsFromToken: string[] = [];
+      const itemIdsFromUser: string[] = [];
 
-        const reparationsCollectionReference = collection(db, 'reparations');
-        const tokensQuery = query(
-          reparationsCollectionReference,
-          where('token', '==', form_data.token)
-        );
-        const tokensQuerySnapshot = await getDocs(tokensQuery);
-        tokensQuerySnapshot.forEach((doc: any) => {
-          itemIds_from_token.push(doc.data().item_id);
-          reparations[doc.data().item_id] = doc.id;
-        });
-
-        const usersCollectionReference = collection(db, 'users');
-        const userQuery = query(
-          usersCollectionReference,
-          where('mail', '==', form_data.mail)
-        );
-        const userQuerySnapshot = await getDocs(userQuery);
-        userQuerySnapshot.forEach((doc: any) => {
-          userId = doc.id;
-        });
-
-        const itemsCollectionReference = collection(db, 'items');
-        const itemsQuery = query(
-          itemsCollectionReference,
-          where('user_id', '==', userId)
-        );
-        const itemsQuerySnapshot = await getDocs(itemsQuery);
-        itemsQuerySnapshot.forEach((doc: any) => {
-          itemIds_from_user.push(doc.id);
-        });
-
-        const intersectedItemIds = itemIds_from_token.filter((value) =>
-          itemIds_from_user.includes(value)
-        );
-
-        push('/track/' + reparations[intersectedItemIds[0]]);
-      });
-    } catch (err) {
-      //TODO handle error
-      console.error(err);
-    }
-  }
-
-  function generateRandomToken(reservedTokens: Set<string>): string {
-    //FIXME this will cause infinite loop if no tokens are available
-    let randomToken;
-    do {
-      const randomLetter = String.fromCharCode(
-        65 + Math.floor(Math.random() * 26)
+      const reparationsCollectionReference = collection(db, 'reparations');
+      const tokensQuery = query(
+        reparationsCollectionReference,
+        where('token', '==', values.token)
       );
-      const randomDigits = Math.floor(Math.random() * 100)
-        .toString()
-        .padStart(2, '0');
-      randomToken = `${randomLetter}${randomDigits}`;
-    } while (reservedTokens.has(randomToken));
-    return randomToken;
-  }
+      const tokensQuerySnapshot = await getDocs(tokensQuery);
+      tokensQuerySnapshot.forEach((doc: any) => {
+        itemIdsFromToken.push(doc.data().item_id);
+        reparations[doc.data().item_id] = doc.id;
+      });
+      if (itemIdsFromToken.length == 0) {
+        setStatus({
+          status: 'ERROR',
+          message:
+            'We konden geen reparatie vinden met deze combinatie van e-mailadres en volgnummer.',
+        });
+        return;
+      }
+
+      const usersCollectionReference = collection(db, 'users');
+      const userQuery = query(
+        usersCollectionReference,
+        where('mail', '==', values.mail)
+      );
+      const userQuerySnapshot = await getDocs(userQuery);
+      userQuerySnapshot.forEach((doc: any) => {
+        userId = doc.id;
+      });
+      if (!userId) {
+        setStatus({
+          status: 'ERROR',
+          message:
+            'We konden geen reparatie vinden met deze combinatie van e-mailadres en volgnummer.',
+        });
+        return;
+      }
+
+      const itemsCollectionReference = collection(db, 'items');
+      const itemsQuery = query(
+        itemsCollectionReference,
+        where('user_id', '==', userId)
+      );
+      const itemsQuerySnapshot = await getDocs(itemsQuery);
+      itemsQuerySnapshot.forEach((doc: any) => {
+        itemIdsFromUser.push(doc.id);
+      });
+
+      const intersectedItemIds = itemIdsFromToken.filter((value) =>
+        itemIdsFromUser.includes(value)
+      );
+
+      if (intersectedItemIds.length == 0) {
+        setStatus({
+          status: 'ERROR',
+          message:
+            'We konden geen reparatie vinden met deze combinatie van e-mailadres en volgnummer.',
+        });
+        return;
+      }
+
+      resetForm();
+      setStatus({
+        status: 'SUCCESS',
+        message: 'Even geduld, we sturen u door naar de tracking pagina.',
+      });
+      push('/track/' + reparations[intersectedItemIds[0]]);
+    }).catch((error) => {
+      let code = 'unknown';
+      error instanceof FirebaseError && (code = error.code);
+
+      console.error(error);
+      setStatus({
+        status: 'ERROR',
+        message: `Oeps, er liep iets mis. Probeer later opnieuw. (${code})`,
+      });
+    });
+  };
 
   function validateMail(value: string) {
     if (!value) {
@@ -137,7 +162,9 @@ function TrackFormComponent() {
   function validateToken(value: string) {
     if (!value) {
       return 'Volgnummer is vereist';
-    } else if (!String(value).match(/^[a-zA-Z][0-9]{2}$/)) {
+    } else if (String(value).match(/^[a-z][0-9]*$/)) {
+      return 'Enkel hoofdletters zijn toegelaten.';
+    } else if (!String(value).match(/^[A-Z][0-9]{2}$/)) {
       return 'Geef een geldig volgnummer op a.u.b.';
     }
   }
@@ -149,7 +176,7 @@ function TrackFormComponent() {
           mail: '',
           token: '',
         }}
-        onSubmit={(values, actions) => track(values)}
+        onSubmit={(values, actions) => handleSubmit(values, actions)}
       >
         {(props: FormikProps<any>) => (
           <Form>
@@ -182,15 +209,6 @@ function TrackFormComponent() {
                       <FormLabel>Volgnummer</FormLabel>
                       <HStack>
                         <Input {...field} type="text" />
-                        {/* <PinInput
-                          onChange={(value) => setPinInput(value)}
-                          value={pinInput}
-                          type="alphanumeric"
-                        >
-                          <PinInputField />
-                          <PinInputField />
-                          <PinInputField />
-                        </PinInput> */}
                       </HStack>
                       <FormHelperText>
                         De volgnummer die je bij afgifte ontving.
@@ -201,9 +219,16 @@ function TrackFormComponent() {
                 </Field>
               </VStack>
 
-              <Button w="100%" isLoading={props.isSubmitting} type="submit">
-                Zoeken
-              </Button>
+              <FormControl isInvalid={props.status?.status === 'ERROR'}>
+                <Button w="100%" isLoading={props.isSubmitting} type="submit">
+                  Zoeken
+                </Button>
+                {props.status?.status === 'ERROR' ? (
+                  <FormErrorMessage>{props.status?.message}</FormErrorMessage>
+                ) : (
+                  <Text mt={2}>{props.status?.message}</Text>
+                )}
+              </FormControl>
             </VStack>
           </Form>
         )}

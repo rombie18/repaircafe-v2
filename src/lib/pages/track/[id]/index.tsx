@@ -28,27 +28,40 @@ import {
   Textarea,
   VStack,
   useSteps,
+  useToast,
 } from '@chakra-ui/react';
+import { FirebaseError } from 'firebase/app';
 import { onSnapshot, doc } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
 import { db } from '~/lib/firebase/config';
 import { Reparation } from '~/lib/models/reparation';
 
 const Home = ({ params }: any) => {
+  const toast = useToast();
   const { id } = params;
   const [reparation, setReparation] = useState<Reparation>();
 
   const getReparation = (setReparation: any) => {
-    try {
-      const unsub = onSnapshot(doc(db, 'reparations', id), (doc: any) => {
+    onSnapshot(
+      doc(db, 'reparations', id),
+      (doc: any) => {
         const document: Reparation = { _id: doc.id, ...doc.data() };
         setReparation(document);
-      });
-    } catch (err) {
-      //TODO handle error
-      console.error(err);
-      setReparation();
-    }
+      },
+      (error) => {
+        let code = 'unknown';
+        error instanceof FirebaseError && (code = error.code);
+
+        console.error(error);
+        toast({
+          title: `Oeps!`,
+          description: `Er liep iets mis bij het ophalen van gegevens. (${code})`,
+          status: 'error',
+          isClosable: true,
+          duration: 10000,
+        });
+      }
+    );
   };
 
   useEffect(() => getReparation(setReparation), []);

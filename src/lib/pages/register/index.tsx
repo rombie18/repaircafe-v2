@@ -18,7 +18,15 @@ import {
   Textarea,
   VStack,
 } from '@chakra-ui/react';
-import { collection, doc, runTransaction } from 'firebase/firestore';
+import { FirebaseError } from 'firebase/app';
+import {
+  collection,
+  doc,
+  getDocs,
+  query,
+  runTransaction,
+  where,
+} from 'firebase/firestore';
 import { Field, Form, Formik, FormikProps } from 'formik';
 import { db } from '~/lib/firebase/config';
 
@@ -50,45 +58,89 @@ const Home = () => {
 };
 
 function RegistrationFormComponent() {
-  async function register(form_data: any) {
-    try {
-      await runTransaction(db, async (transaction) => {
-        const userDocumentReference = doc(collection(db, 'users'));
-        await transaction.set(userDocumentReference, {
-          first_name: form_data.first_name,
-          last_name: form_data.last_name,
-          mail: form_data.mail,
-          phone: form_data.phone,
-          status: 'ACTIVE',
+  const handleSubmit = async (
+    values: {
+      first_name: string;
+      last_name: string;
+      mail: string;
+      phone: string;
+      title: string;
+      description: string;
+      state: string;
+    },
+    { setStatus, resetForm }: { setStatus: Function; resetForm: Function }
+  ) => {
+    setStatus();
+
+    await runTransaction(db, async (transaction) => {
+      let userId: string | undefined;
+
+      const collectionReference = collection(db, 'users');
+      const usersQuery = query(
+        collectionReference,
+        where('mail', '==', values.mail)
+      );
+      const usersQuerySnapshot = await getDocs(usersQuery);
+      usersQuerySnapshot.forEach((doc: any) => {
+        userId = doc.id;
+      });
+
+      console.log(userId);
+
+      let userDocumentReference;
+      if (!userId) {
+        userDocumentReference = doc(collection(db, 'users'));
+      } else {
+        userDocumentReference = doc(collection(db, 'users'), userId);
+      }
+
+      await transaction.set(userDocumentReference, {
+        first_name: values.first_name,
+        last_name: values.last_name,
+        mail: values.mail,
+        phone: values.phone,
+      });
+      const itemDocumentReference = doc(collection(db, 'items'));
+      await transaction.set(itemDocumentReference, {
+        name: values.title,
+        description: values.description,
+        state: values.state,
+        user_id: userDocumentReference.id,
+      });
+      const reparationDocumentReference = doc(collection(db, 'reparations'));
+      await transaction.set(reparationDocumentReference, {
+        events: [
+          {
+            state_cycle: 'REGISTERED',
+            timestamp: new Date(),
+          },
+        ],
+        item_id: itemDocumentReference.id,
+        remarks: '',
+        state_cycle: 'REGISTERED',
+        state_reparation: 'UNKNOWN',
+        state_token: 'RELEASED',
+        token: '',
+      });
+    })
+      .then(() => {
+        resetForm();
+        setStatus({
+          status: 'SUCCESS',
+          message: 'Gelukt! We hebben uw registratie goed ontvangen.',
         });
-        const itemDocumentReference = doc(collection(db, 'items'));
-        await transaction.set(itemDocumentReference, {
-          name: form_data.title,
-          description: form_data.description,
-          state: form_data.state,
-          user_id: userDocumentReference.id,
-        });
-        const reparationDocumentReference = doc(collection(db, 'reparations'));
-        await transaction.set(reparationDocumentReference, {
-          events: [
-            {
-              state_cycle: 'REGISTERED',
-              timestamp: new Date(),
-            },
-          ],
-          item_id: itemDocumentReference.id,
-          remarks: '',
-          state_cycle: 'REGISTERED',
-          state_reparation: 'UNKNOWN',
-          state_token: 'RELEASED',
-          token: '',
+      })
+      .catch((error) => {
+        let code = 'unknown';
+        error instanceof FirebaseError && (code = error.code);
+
+        console.error(error);
+        setStatus({
+          status: 'ERROR',
+          message: `Oeps, er liep iets mis. Probeer later opnieuw. (${code})`,
         });
       });
-    } catch (err) {
-      //TODO handle error
-      console.error(err);
-    }
-  }
+  };
 
   function validateFirstName(value: string) {
     if (!value) {
@@ -144,8 +196,6 @@ function RegistrationFormComponent() {
     }
   }
 
-  //TODO overwrite user if email already exists
-
   return (
     <Box w="100%">
       <Formik
@@ -158,7 +208,7 @@ function RegistrationFormComponent() {
           description: '',
           state: '',
         }}
-        onSubmit={(values, actions) => register(values)}
+        onSubmit={(values, actions) => handleSubmit(values, actions)}
       >
         {(props: FormikProps<any>) => (
           <Form>
@@ -306,9 +356,16 @@ function RegistrationFormComponent() {
                 </Field>
               </VStack>
 
-              <Button w="100%" isLoading={props.isSubmitting} type="submit">
-                Registreren
-              </Button>
+              <FormControl isInvalid={props.status?.status === 'ERROR'}>
+                <Button w="100%" isLoading={props.isSubmitting} type="submit">
+                  Registreren
+                </Button>
+                {props.status?.status === 'ERROR' ? (
+                  <FormErrorMessage>{props.status?.message}</FormErrorMessage>
+                ) : (
+                  <Text mt={2}>{props.status?.message}</Text>
+                )}
+              </FormControl>
             </VStack>
           </Form>
         )}
