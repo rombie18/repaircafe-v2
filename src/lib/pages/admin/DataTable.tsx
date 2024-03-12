@@ -1,25 +1,27 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { TriangleDownIcon, TriangleUpIcon } from '@chakra-ui/icons';
 import {
   Table,
-  Thead,
   Tbody,
-  Tr,
-  Th,
   Td,
-  chakra,
+  Th,
+  Thead,
+  Tr,
   VStack,
+  chakra,
 } from '@chakra-ui/react';
-import { TriangleDownIcon, TriangleUpIcon } from '@chakra-ui/icons';
 import { rankItem } from '@tanstack/match-sorter-utils';
+import type { ColumnDef, FilterFn, SortingState } from '@tanstack/react-table';
 import {
-  useReactTable,
   flexRender,
   getCoreRowModel,
-  getSortedRowModel,
   getFilteredRowModel,
+  getSortedRowModel,
+  useReactTable,
 } from '@tanstack/react-table';
-import type { ColumnDef, SortingState, FilterFn } from '@tanstack/react-table';
-import DebouncedInputComponent from '~/lib/components/DebouncedInput';
 import { useState } from 'react';
+
+import DebouncedInputComponent from '~/lib/components/DebouncedInput';
 
 export type DataTableProps<Data extends object> = {
   data: Data[];
@@ -76,13 +78,10 @@ export function DataTable<Data extends object>({
           {table.getHeaderGroups().map((headerGroup) => (
             <Tr key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
-                // see https://tanstack.com/table/v8/docs/api/core/column-def#meta to type this correctly
-                const meta: any = header.column.columnDef.meta;
                 return (
                   <Th
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
-                    isNumeric={meta?.isNumeric}
                   >
                     {flexRender(
                       header.column.columnDef.header,
@@ -90,13 +89,16 @@ export function DataTable<Data extends object>({
                     )}
 
                     <chakra.span pl="4">
-                      {header.column.getIsSorted() ? (
-                        header.column.getIsSorted() === 'desc' ? (
-                          <TriangleDownIcon aria-label="sorted descending" />
-                        ) : (
-                          <TriangleUpIcon aria-label="sorted ascending" />
-                        )
-                      ) : null}
+                      {!header.column.getIsSorted()
+                        ? null
+                        : header.column.getIsSorted() === 'desc' && (
+                            <TriangleDownIcon aria-label="sorted descending" />
+                          )}
+                      {!header.column.getIsSorted()
+                        ? null
+                        : header.column.getIsSorted() === 'asc' && (
+                            <TriangleUpIcon aria-label="sorted ascending" />
+                          )}
                     </chakra.span>
                   </Th>
                 );
@@ -108,10 +110,8 @@ export function DataTable<Data extends object>({
           {table.getRowModel().rows.map((row) => (
             <Tr key={row.id}>
               {row.getVisibleCells().map((cell) => {
-                // see https://tanstack.com/table/v8/docs/api/core/column-def#meta to type this correctly
-                const meta: any = cell.column.columnDef.meta;
                 return (
-                  <Td key={cell.id} isNumeric={meta?.isNumeric}>
+                  <Td key={cell.id}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </Td>
                 );

@@ -1,4 +1,4 @@
-import { Box, Flex, Image, HStack } from '@chakra-ui/react';
+import { Box, Flex, HStack, Image } from '@chakra-ui/react';
 
 import ThemeToggle from './ThemeToggle';
 

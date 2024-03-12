@@ -12,42 +12,59 @@ import {
   useToast,
 } from '@chakra-ui/react';
 import { FirebaseError } from 'firebase/app';
-import { onSnapshot, doc } from 'firebase/firestore';
-import { useState, useEffect } from 'react';
+import { onSnapshot } from 'firebase/firestore';
+import type { Dispatch, SetStateAction } from 'react';
+import { useEffect, useState } from 'react';
+
 import ReparationStepsComponent from '~/lib/components/ReparationSteps';
 import { AutoReparationTagComponent } from '~/lib/components/ReparationTag';
-import { db } from '~/lib/firebase/config';
-import { Reparation } from '~/lib/models/reparation';
+import type { ExtendedReparation, Reparation } from '~/lib/models/reparation';
+import { typedDb } from '~/lib/utils/db';
 
-const Home = ({ params }: any) => {
+interface PageProps {
+  params: {
+    id: string;
+  };
+}
+
+const Page = ({ params }: PageProps) => {
   const toast = useToast();
   const { id } = params;
   const [reparation, setReparation] = useState<Reparation>();
 
-  const getReparation = (setReparation: any) => {
-    onSnapshot(
-      doc(db, 'reparations', id),
-      (doc: any) => {
-        const document: Reparation = { _id: doc.id, ...doc.data() };
-        setReparation(document);
-      },
-      (error) => {
-        let code = 'unknown';
-        error instanceof FirebaseError && (code = error.code);
+  useEffect(() => {
+    const getData = (
+      setData: Dispatch<SetStateAction<Reparation | undefined>>
+    ) => {
+      onSnapshot(
+        typedDb.reparation(id),
+        (snapshot) => {
+          if (!snapshot.exists()) {
+            throw Error();
+          }
+          const result: ExtendedReparation = {
+            id: snapshot.id,
+            ...snapshot.data(),
+          };
+          setData(result);
+        },
+        (error) => {
+          const code = error instanceof FirebaseError ? error.code : 'unknown';
 
-        console.error(error);
-        toast({
-          title: `Oeps!`,
-          description: `Er liep iets mis bij het ophalen van gegevens. (${code})`,
-          status: 'error',
-          isClosable: true,
-          duration: 10000,
-        });
-      }
-    );
-  };
+          console.error(error);
+          toast({
+            title: `Oeps!`,
+            description: `Er liep iets mis bij het ophalen van gegevens. (${code})`,
+            status: 'error',
+            isClosable: true,
+            duration: 10000,
+          });
+        }
+      );
+    };
 
-  useEffect(() => getReparation(setReparation), []);
+    getData(setReparation);
+  }, [id, toast]);
 
   if (reparation) {
     return (
@@ -90,9 +107,10 @@ const Home = ({ params }: any) => {
         </Flex>
       </>
     );
-  } else {
-    <Text>Laden...</Text>;
   }
+
+  // TODO update loading indicator
+  return <Text>Laden...</Text>;
 };
 
-export default Home;
+export default Page;

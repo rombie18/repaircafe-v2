@@ -1,42 +1,49 @@
 'use client';
 
 import {
+  BellIcon,
   CheckIcon,
   CloseIcon,
+  DownloadIcon,
   MinusIcon,
   QuestionIcon,
-  BellIcon,
   SettingsIcon,
   SpinnerIcon,
-  DownloadIcon,
   UnlockIcon,
 } from '@chakra-ui/icons';
 import { Badge, Box, Button, HStack, useToast } from '@chakra-ui/react';
 import { createColumnHelper } from '@tanstack/react-table';
-import { DataTable } from './DataTable';
-import { DateTime } from 'luxon';
-import React, { useEffect, useState } from 'react';
-import { onSnapshot, collection, doc, getDoc } from 'firebase/firestore';
-import { db } from '~/lib/firebase/config';
-import { Reparation } from '~/lib/models/reparation';
 import { FirebaseError } from 'firebase/app';
+import { getDoc, onSnapshot } from 'firebase/firestore';
+import { DateTime } from 'luxon';
+import type { Dispatch, SetStateAction } from 'react';
+import { useEffect, useState } from 'react';
+
 import {
-  SetDepositedActionButtonComponent,
-  SetQueuedActionButtonComponent,
-  SetPendingActionButtonComponent,
-  SetFinishedActionButtonComponent,
-  SetCollectedActionButtonComponent,
   DeleteButtonComponent,
   EditButtonComponent,
+  SetCollectedActionButtonComponent,
+  SetDepositedActionButtonComponent,
+  SetFinishedActionButtonComponent,
+  SetPendingActionButtonComponent,
+  SetQueuedActionButtonComponent,
   SetReleasedActionButtonComponent,
 } from '~/lib/components/Buttons';
 import { ExpandableReparationTagComponent } from '~/lib/components/ReparationTag';
+import type { ExtendedItem, Item } from '~/lib/models/item';
+import type { ExtendedReparation } from '~/lib/models/reparation';
+import type { ExtendedUser } from '~/lib/models/user';
+import { typedDb } from '~/lib/utils/db';
 
-const columnHelper = createColumnHelper<{
+import { DataTable } from './DataTable';
+
+interface Document {
   item: Item;
-  reparation: Reparation;
-  user: User;
-}>();
+  reparation: ExtendedReparation;
+  user: ExtendedUser;
+}
+
+const columnHelper = createColumnHelper<Document>();
 
 const columns = [
   columnHelper.accessor('reparation.state_reparation', {
@@ -106,14 +113,13 @@ const columns = [
     cell: (info) => {
       const event = info
         .getValue()
-        .filter((event) => event.state_cycle === 'DEPOSITED')[0];
+        .filter((item) => item.state_cycle === 'DEPOSITED')[0];
       if (event) {
         return DateTime.fromJSDate(event.timestamp.toDate())
           .setLocale('nl')
           .toFormat("d MMM',' H'u'mm");
-      } else {
-        return '';
       }
+      return '';
     },
     header: 'Aangemeld',
   }),
@@ -171,7 +177,7 @@ const columns = [
   columnHelper.display({
     id: 'actions',
     cell: (props) => {
-      const reparation: Reparation = props.row.original.reparation;
+      const { reparation } = props.row.original;
 
       switch (reparation.state_cycle) {
         case 'REGISTERED':
@@ -253,23 +259,23 @@ const columns = [
                 <DeleteButtonComponent reparation={reparation} />
               </HStack>
             );
-          } else {
-            return (
-              <HStack>
-                <Button
-                  w="100%"
-                  colorScheme="gray"
-                  variant="solid"
-                  size="sm"
-                  isDisabled
-                >
-                  Afgehandeld!
-                </Button>
-                <EditButtonComponent />
-                <DeleteButtonComponent reparation={reparation} />
-              </HStack>
-            );
           }
+          return (
+            <HStack>
+              <Button
+                w="100%"
+                colorScheme="gray"
+                variant="solid"
+                size="sm"
+                isDisabled
+              >
+                Afgehandeld!
+              </Button>
+              <EditButtonComponent />
+              <DeleteButtonComponent reparation={reparation} />
+            </HStack>
+          );
+
         case 'UNKNOWN':
         default:
           return (
@@ -283,72 +289,80 @@ const columns = [
   }),
 ];
 
-//TODO deduplicate firebase requests and enable caching
-const Home = () => {
+// TODO deduplicate firebase requests and enable caching
+const Page = () => {
   const toast = useToast();
-  const [data, setData] = useState<
-    { item: Item; reparation: Reparation; user: User }[]
-  >([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
 
-  const getData = (setData: any) => {
-    onSnapshot(
-      collection(db, 'reparations'),
-      async (docs) => {
-        const documents: { item: Item; reparation: Reparation; user: User }[] =
-          [];
+  useEffect(() => {
+    const getData = (setData: Dispatch<SetStateAction<Document[]>>) => {
+      onSnapshot(
+        typedDb.reparations,
+        async (snapshot) => {
+          const result: Document[] = [];
 
-        await Promise.all(
-          docs.docs.map(async (document: any) => {
-            const reparation: Reparation = {
-              _id: document.id,
-              ...document.data(),
-            };
-            const itemSnapshot = await getDoc(
-              doc(db, 'items', reparation.item_id)
-            );
-            const itemData: any = itemSnapshot.data();
-            const item: Item = { _id: itemSnapshot.id, ...itemData };
-            const userSnapshot = await getDoc(doc(db, 'users', item.user_id));
-            const userData: any = userSnapshot.data();
-            const user: User = {
-              _id: userSnapshot.id,
-              ...userData,
-              name: `${userData.first_name} ${userData.last_name}`,
-            };
+          await Promise.all(
+            snapshot.docs.map(async (document) => {
+              const reparation: ExtendedReparation = {
+                id: document.id,
+                ...document.data(),
+              };
 
-            documents.push({
-              item: item,
-              reparation: reparation,
-              user: user,
-            });
-          })
-        );
+              const itemSnapshot = await getDoc(
+                typedDb.item(reparation.item_id)
+              );
+              if (!itemSnapshot.exists()) {
+                throw Error();
+              }
 
-        setData(documents);
-      },
-      (error) => {
-        let code = 'unknown';
-        error instanceof FirebaseError && (code = error.code);
+              const item: ExtendedItem = {
+                id: itemSnapshot.id,
+                ...itemSnapshot.data(),
+              };
 
-        console.error(error);
-        toast({
-          title: `Oeps!`,
-          description: `Er liep iets mis bij het ophalen van gegevens. (${code})`,
-          status: 'error',
-          isClosable: true,
-          duration: 10000,
-        });
-      }
-    );
-  };
+              const userSnapshot = await getDoc(typedDb.user(item.user_id));
+              if (!userSnapshot.exists()) {
+                throw Error();
+              }
 
-  useEffect(() => getData(setData), []);
+              const user: ExtendedUser = {
+                id: userSnapshot.id,
+                name: `${userSnapshot.data().first_name} ${userSnapshot.data().last_name}`,
+                ...userSnapshot.data(),
+              };
+
+              result.push({
+                item,
+                reparation,
+                user,
+              });
+            })
+          );
+
+          setData(result);
+        },
+        (error) => {
+          const code = error instanceof FirebaseError ? error.code : 'unknown';
+
+          console.error(error);
+          toast({
+            title: `Oeps!`,
+            description: `Er liep iets mis bij het ophalen van gegevens. (${code})`,
+            status: 'error',
+            isClosable: true,
+            duration: 10000,
+          });
+        }
+      );
+    };
+    getData(setDocuments);
+  }, [toast]);
 
   return (
-    <Box overflowX={'auto'}>
-      <DataTable columns={columns} data={data} />
+    <Box overflowX="auto">
+      <DataTable columns={columns} data={documents} />
     </Box>
   );
 };
 
-export default Home;
+export default Page;

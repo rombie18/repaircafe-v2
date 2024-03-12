@@ -3,5 +3,11 @@
     "sznm/react",
     "plugin:react/jsx-runtime",
     "plugin:@next/next/recommended"
-  ]
+  ],
+  "rules": {
+    "no-unused-vars": "off",
+    "no-unused-expressions": "off",
+    "no-explicit-any": "off",
+    "no-console": "off"
+  }
 }

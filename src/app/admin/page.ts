@@ -1,3 +1,3 @@
-import Home from '~/lib/pages/admin';
+import Page from '~/lib/pages/admin';
 
-export default Home;
+export default Page;

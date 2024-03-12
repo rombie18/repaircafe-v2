@@ -1,3 +1,3 @@
-import Home from '~/lib/pages/register';
+import Page from '~/lib/pages/register';
 
-export default Home;
+export default Page;

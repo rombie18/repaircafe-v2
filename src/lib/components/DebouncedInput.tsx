@@ -1,5 +1,6 @@
-import { InputGroup, Input, InputRightElement, Button } from '@chakra-ui/react';
-import { InputHTMLAttributes, useEffect, useState } from 'react';
+import { Button, Input, InputGroup, InputRightElement } from '@chakra-ui/react';
+import type { InputHTMLAttributes } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function DebouncedInputComponent({
   value: initialValue,
@@ -23,7 +24,7 @@ export default function DebouncedInputComponent({
     }, debounce);
 
     return () => clearTimeout(timeout);
-  }, [value]);
+  }, [debounce, onChange, value]);
 
   return (
     <InputGroup>
@@ -33,7 +34,7 @@ export default function DebouncedInputComponent({
         onChange={(e) => setValue(e.target.value)}
       />
       <InputRightElement width="6rem" mr="0.5rem">
-        <Button h="1.75rem" size="sm" onClick={(e) => setValue('')}>
+        <Button h="1.75rem" size="sm" onClick={() => setValue('')}>
           Leegmaken
         </Button>
       </InputRightElement>

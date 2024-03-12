@@ -1,9 +1,10 @@
 'use client';
 
 import { Flex, Heading, Text, VStack } from '@chakra-ui/react';
+
 import { TrackFormComponent } from '~/lib/components/Forms';
 
-const Home = () => {
+const Page = () => {
   return (
     <>
       <VStack paddingY={6} align="start">
@@ -30,4 +31,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default Page;

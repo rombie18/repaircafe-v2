@@ -1,3 +1,3 @@
-import Home from '~/lib/pages/track/[id]';
+import Page from '~/lib/pages/track/[id]';
 
-export default Home;
+export default Page;

@@ -1,52 +1,54 @@
 import {
-  EditIcon,
-  DeleteIcon,
-  WarningTwoIcon,
   CheckIcon,
-  MinusIcon,
   CloseIcon,
+  DeleteIcon,
+  EditIcon,
+  MinusIcon,
   QuestionIcon,
+  WarningTwoIcon,
 } from '@chakra-ui/icons';
 import {
-  IconButton,
-  useToast,
-  useDisclosure,
   AlertDialog,
-  AlertDialogOverlay,
-  AlertDialogContent,
-  AlertDialogHeader,
   AlertDialogBody,
+  AlertDialogContent,
   AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
   Button,
-  useRadioGroup,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalCloseButton,
-  ModalBody,
   FormControl,
+  FormHelperText,
   FormLabel,
   HStack,
-  Textarea,
-  FormHelperText,
+  IconButton,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
   ModalFooter,
+  ModalHeader,
+  ModalOverlay,
+  Textarea,
+  useDisclosure,
+  useRadioGroup,
+  useToast,
 } from '@chakra-ui/react';
 import { FirebaseError } from 'firebase/app';
 import {
-  runTransaction,
-  doc,
   arrayUnion,
-  collection,
-  query,
-  where,
   getDocs,
+  query,
+  runTransaction,
+  where,
 } from 'firebase/firestore';
-import { useRef, useState } from 'react';
-import { db } from '../firebase/config';
-import { Reparation } from '../models/reparation';
-import { RadioReparationTagComponent } from './ReparationTag';
 import NextLink from 'next/link';
+import { useRef, useState } from 'react';
+
+import { db } from '../firebase/config';
+import type { ExtendedReparation } from '../models/reparation';
+import { typedDb } from '../utils/db';
+import { generateRandomToken } from '../utils/functions';
+
+import { RadioReparationTagComponent } from './ReparationTag';
 
 function EditButtonComponent() {
   return (
@@ -64,18 +66,21 @@ function EditButtonComponent() {
   );
 }
 
-function DeleteButtonComponent({ reparation }: { reparation: Reparation }) {
+function DeleteButtonComponent({
+  reparation,
+}: {
+  reparation: ExtendedReparation;
+}) {
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const cancelRef = useRef(null);
 
   const deleteReparation = async () => {
     await runTransaction(db, async (transaction) => {
-      await transaction.delete(doc(db, 'items', reparation.item_id));
-      await transaction.delete(doc(db, 'reparations', reparation._id));
+      await transaction.delete(typedDb.item(reparation.item_id));
+      await transaction.delete(typedDb.reparation(reparation.id));
     }).catch((error) => {
-      let code = 'unknown';
-      error instanceof FirebaseError && (code = error.code);
+      const code = error instanceof FirebaseError ? error.code : 'unknown';
 
       console.error(error);
       toast({
@@ -144,7 +149,7 @@ function SetPendingActionButtonComponent({
   icon,
   text,
 }: {
-  reparation: Reparation;
+  reparation: ExtendedReparation;
   colorScheme: string;
   icon: JSX.Element;
   text: string;
@@ -154,7 +159,7 @@ function SetPendingActionButtonComponent({
   const updateReparation = async () => {
     setIsLoading(true);
     await runTransaction(db, async (transaction) => {
-      const documentReference = doc(db, 'reparations', reparation._id);
+      const documentReference = typedDb.reparation(reparation.id);
       await transaction.update(documentReference, {
         state_cycle: 'PENDING',
         events: arrayUnion({
@@ -164,8 +169,7 @@ function SetPendingActionButtonComponent({
       });
     })
       .catch((error) => {
-        let code = 'unknown';
-        error instanceof FirebaseError && (code = error.code);
+        const code = error instanceof FirebaseError ? error.code : 'unknown';
 
         console.error(error);
         toast({
@@ -200,7 +204,7 @@ function SetQueuedActionButtonComponent({
   icon,
   text,
 }: {
-  reparation: Reparation;
+  reparation: ExtendedReparation;
   colorScheme: string;
   icon: JSX.Element;
   text: string;
@@ -211,7 +215,7 @@ function SetQueuedActionButtonComponent({
   const updateReparation = async () => {
     setIsLoading(true);
     await runTransaction(db, async (transaction) => {
-      const documentReference = doc(db, 'reparations', reparation._id);
+      const documentReference = typedDb.reparation(reparation.id);
       await transaction.update(documentReference, {
         state_cycle: 'QUEUED',
         events: arrayUnion({
@@ -221,8 +225,7 @@ function SetQueuedActionButtonComponent({
       });
     })
       .catch((error) => {
-        let code = 'unknown';
-        error instanceof FirebaseError && (code = error.code);
+        const code = error instanceof FirebaseError ? error.code : 'unknown';
 
         console.error(error);
         toast({
@@ -257,7 +260,7 @@ function SetDepositedActionButtonComponent({
   icon,
   text,
 }: {
-  reparation: Reparation;
+  reparation: ExtendedReparation;
   colorScheme: string;
   icon: JSX.Element;
   text: string;
@@ -270,19 +273,19 @@ function SetDepositedActionButtonComponent({
     await runTransaction(db, async (transaction) => {
       const reservedTokens: Set<string> = new Set();
 
-      const collectionReference = collection(db, 'reparations');
+      const collectionReference = typedDb.reparations;
       const tokensQuery = query(
         collectionReference,
         where('state_token', '==', 'RESERVED')
       );
       const tokensQuerySnapshot = await getDocs(tokensQuery);
-      tokensQuerySnapshot.forEach((doc: any) => {
+      tokensQuerySnapshot.forEach((doc) => {
         reservedTokens.add(doc.data().token);
       });
 
       const generatedtoken = generateRandomToken(reservedTokens);
 
-      const documentReference = doc(db, 'reparations', reparation._id);
+      const documentReference = typedDb.reparation(reparation.id);
       await transaction.update(documentReference, {
         token: generatedtoken,
         state_cycle: 'DEPOSITED',
@@ -292,11 +295,10 @@ function SetDepositedActionButtonComponent({
           timestamp: new Date(),
         }),
       });
-      //TODO send mail with track link
+      // TODO send mail with track link
     })
       .catch((error) => {
-        let code = 'unknown';
-        error instanceof FirebaseError && (code = error.code);
+        const code = error instanceof FirebaseError ? error.code : 'unknown';
 
         console.error(error);
         toast({
@@ -331,7 +333,7 @@ function SetReleasedActionButtonComponent({
   icon,
   text,
 }: {
-  reparation: Reparation;
+  reparation: ExtendedReparation;
   colorScheme: string;
   icon: JSX.Element;
   text: string;
@@ -342,14 +344,13 @@ function SetReleasedActionButtonComponent({
   const updateReparation = async () => {
     setIsLoading(true);
     await runTransaction(db, async (transaction) => {
-      const documentReference = doc(db, 'reparations', reparation._id);
+      const documentReference = typedDb.reparation(reparation.id);
       await transaction.update(documentReference, {
         state_token: 'RELEASED',
       });
     })
       .catch((error) => {
-        let code = 'unknown';
-        error instanceof FirebaseError && (code = error.code);
+        const code = error instanceof FirebaseError ? error.code : 'unknown';
 
         console.error(error);
         toast({
@@ -384,7 +385,7 @@ function SetCollectedActionButtonComponent({
   icon,
   text,
 }: {
-  reparation: Reparation;
+  reparation: ExtendedReparation;
   colorScheme: string;
   icon: JSX.Element;
   text: string;
@@ -395,7 +396,7 @@ function SetCollectedActionButtonComponent({
   const updateReparation = async () => {
     setIsLoading(true);
     await runTransaction(db, async (transaction) => {
-      const documentReference = doc(db, 'reparations', reparation._id);
+      const documentReference = typedDb.reparation(reparation.id);
       await transaction.update(documentReference, {
         state_cycle: 'COLLECTED',
         events: arrayUnion({
@@ -405,8 +406,7 @@ function SetCollectedActionButtonComponent({
       });
     })
       .catch((error) => {
-        let code = 'unknown';
-        error instanceof FirebaseError && (code = error.code);
+        const code = error instanceof FirebaseError ? error.code : 'unknown';
 
         console.error(error);
         toast({
@@ -441,7 +441,7 @@ function SetFinishedActionButtonComponent({
   icon,
   text,
 }: {
-  reparation: Reparation;
+  reparation: ExtendedReparation;
   colorScheme: string;
   icon: JSX.Element;
   text: string;
@@ -476,27 +476,26 @@ function SetFinishedActionButtonComponent({
   const toast = useToast();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const { value, getRadioProps, getRootProps } = useRadioGroup();
+  const { value, getRadioProps } = useRadioGroup();
   const [remarks, setRemarks] = useState<string>('');
 
   const updateReparation = async () => {
     setIsLoading(true);
     await runTransaction(db, async (transaction) => {
-      const documentReference = doc(db, 'reparations', reparation._id);
+      const documentReference = typedDb.reparation(reparation.id);
       await transaction.update(documentReference, {
         state_cycle: 'FINISHED',
         state_reparation: value,
-        remarks: remarks,
+        remarks,
         events: arrayUnion({
           state_cycle: 'FINISHED',
           timestamp: new Date(),
         }),
       });
-      //TODO send email to user
+      // TODO send email to user
     })
       .catch((error) => {
-        let code = 'unknown';
-        error instanceof FirebaseError && (code = error.code);
+        const code = error instanceof FirebaseError ? error.code : 'unknown';
 
         console.error(error);
         toast({
@@ -525,7 +524,7 @@ function SetFinishedActionButtonComponent({
         {text}
       </Button>
 
-      <Modal isOpen={isOpen} onClose={onClose} size={'lg'}>
+      <Modal isOpen={isOpen} onClose={onClose} size="lg">
         <ModalOverlay />
         <ModalContent>
           <ModalHeader>Reparatie voltooien</ModalHeader>
@@ -533,7 +532,7 @@ function SetFinishedActionButtonComponent({
           <ModalBody pb={6}>
             <FormControl mt={4}>
               <FormLabel>Reparatiestatus</FormLabel>
-              <HStack wrap={'wrap'}>
+              <HStack wrap="wrap">
                 {radios.map((radio) => {
                   return (
                     <RadioReparationTagComponent
@@ -577,37 +576,13 @@ function SetFinishedActionButtonComponent({
   );
 }
 
-//TODO move
-function generateRandomToken(reservedTokens: Set<string>): string {
-  let randomToken;
-
-  if (reservedTokens.size == 2600) {
-    throw new FirebaseError(
-      'no-tokens-available',
-      'Er zijn geen vrije volgnummers beschikbaar. Alle 2600 nummers zijn in gebruik.'
-    );
-  }
-
-  do {
-    const randomLetter = String.fromCharCode(
-      65 + Math.floor(Math.random() * 26)
-    );
-    const randomDigits = Math.floor(Math.random() * 100)
-      .toString()
-      .padStart(2, '0');
-    randomToken = `${randomLetter}${randomDigits}`;
-  } while (reservedTokens.has(randomToken));
-
-  return randomToken;
-}
-
 export {
-  SetDepositedActionButtonComponent,
-  SetQueuedActionButtonComponent,
-  SetPendingActionButtonComponent,
-  SetFinishedActionButtonComponent,
-  SetCollectedActionButtonComponent,
-  SetReleasedActionButtonComponent,
-  EditButtonComponent,
   DeleteButtonComponent,
+  EditButtonComponent,
+  SetCollectedActionButtonComponent,
+  SetDepositedActionButtonComponent,
+  SetFinishedActionButtonComponent,
+  SetPendingActionButtonComponent,
+  SetQueuedActionButtonComponent,
+  SetReleasedActionButtonComponent,
 };

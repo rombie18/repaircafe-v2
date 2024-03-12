@@ -1,20 +1,22 @@
 import {
   CheckIcon,
-  MinusIcon,
   CloseIcon,
+  MinusIcon,
   QuestionIcon,
 } from '@chakra-ui/icons';
+import type { RadioProps } from '@chakra-ui/react';
 import {
-  useDisclosure,
+  Box,
+  Collapse,
   HStack,
   Tag,
-  Collapse,
   TagLabel,
-  useRadio,
   chakra,
-  Box,
+  useDisclosure,
+  useRadio,
 } from '@chakra-ui/react';
-import { Reparation } from '../models/reparation';
+
+import type { Reparation } from '../models/reparation';
 
 function ExpandableReparationTagComponent({
   colorScheme,
@@ -103,7 +105,9 @@ function AutoReparationTagComponent({
   }
 }
 
-function RadioReparationTagComponent(props: any) {
+function RadioReparationTagComponent(
+  props: { text: string; colorScheme: string; icon: JSX.Element } & RadioProps
+) {
   const { text, colorScheme, icon, ...radioProps } = props;
   const { state, getInputProps, getRadioProps, htmlProps, getLabelProps } =
     useRadio(radioProps);
@@ -117,7 +121,7 @@ function RadioReparationTagComponent(props: any) {
           state.isChecked ? '0 0 5px 0px var(--chakra-colors-gray-500)' : 'none'
         }
         borderWidth={state.isChecked ? '1px' : 'none'}
-        borderColor={'white'}
+        borderColor="white"
         rounded="full"
       >
         <ReparationTagComponent
@@ -132,8 +136,8 @@ function RadioReparationTagComponent(props: any) {
 }
 
 export {
-  ReparationTagComponent,
   AutoReparationTagComponent,
-  RadioReparationTagComponent,
   ExpandableReparationTagComponent,
+  RadioReparationTagComponent,
+  ReparationTagComponent,
 };

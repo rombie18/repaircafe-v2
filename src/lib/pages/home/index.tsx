@@ -1,9 +1,10 @@
 'use client';
 
 import { Flex, Heading, Text, VStack } from '@chakra-ui/react';
+
 import OnboardingCardComponent from '~/lib/components/OnboardingCard';
 
-const Home = () => {
+const Page = () => {
   return (
     <>
       <VStack paddingY={6} align="start">
@@ -48,4 +49,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default Page;

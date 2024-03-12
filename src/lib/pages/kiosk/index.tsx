@@ -1,35 +1,60 @@
 'use client';
 
 import { CheckIcon, SettingsIcon } from '@chakra-ui/icons';
-import { Box } from '@chakra-ui/react';
-import React, { useEffect, useState } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '~/lib/firebase/config';
-import { Reparation } from '~/lib/models/reparation';
+import { Box, useToast } from '@chakra-ui/react';
+import { FirebaseError } from 'firebase/app';
+import { onSnapshot } from 'firebase/firestore';
+import type { Dispatch, SetStateAction } from 'react';
+import { useEffect, useState } from 'react';
+
 import {
   TokenGridComponent,
   TokenMarqueeComponent,
 } from '~/lib/components/Tokens';
+import type { ExtendedReparation } from '~/lib/models/reparation';
+import { typedDb } from '~/lib/utils/db';
 
-const Home = () => {
-  const [reparations, setReparations] = useState<Reparation[]>([]);
+const Page = () => {
+  const toast = useToast();
+  const [reparations, setReparations] = useState<ExtendedReparation[]>([]);
 
-  const getReparations = (setReparations: any) => {
-    try {
-      const unsub = onSnapshot(collection(db, 'reparations'), (doc) => {
-        const documents: Reparation[] = [];
-        doc.forEach((document: any) => {
-          documents.push({ _id: document.id, ...document.data() });
-        });
-        setReparations(documents);
-      });
-    } catch (err) {
-      console.error(err);
-      setReparations([]);
-    }
-  };
+  useEffect(() => {
+    const getData = (
+      setData: Dispatch<SetStateAction<ExtendedReparation[]>>
+    ) => {
+      onSnapshot(
+        typedDb.reparations,
+        (snapshot) => {
+          const documents: ExtendedReparation[] = [];
+          snapshot.forEach((document) => {
+            if (!document.exists()) {
+              throw Error();
+            }
 
-  useEffect(() => getReparations(setReparations), []);
+            const reparation: ExtendedReparation = {
+              id: document.id,
+              ...document.data(),
+            };
+            documents.push(reparation);
+          });
+          setData(documents);
+        },
+        (error) => {
+          const code = error instanceof FirebaseError ? error.code : 'unknown';
+
+          console.error(error);
+          toast({
+            title: `Oeps!`,
+            description: `Er liep iets mis bij het updaten van een item. (${code})`,
+            status: 'error',
+            isClosable: true,
+            duration: 10000,
+          });
+        }
+      );
+    };
+    getData(setReparations);
+  }, [toast]);
 
   return (
     <Box display="flex" flexDirection="column">
@@ -70,4 +95,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default Page;

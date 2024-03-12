@@ -1,12 +1,10 @@
 import type { Timestamp } from 'firebase/firestore';
 
-export type ReparationEvent = {
-  state_cycle: string;
-  timestamp: Timestamp;
-};
+interface ExtendedReparation extends Reparation {
+  id: string;
+}
 
-export type Reparation = {
-  _id: string;
+interface Reparation {
   events: ReparationEvent[];
   item_id: string;
   remarks: string;
@@ -14,4 +12,11 @@ export type Reparation = {
   state_reparation: string;
   state_token: string;
   token: string;
-};
+}
+
+interface ReparationEvent {
+  state_cycle: string;
+  timestamp: Timestamp;
+}
+
+export type { ExtendedReparation, Reparation, ReparationEvent };

@@ -1,13 +1,7 @@
-import {
-  Box,
-  Button,
-  Heading,
-  Image,
-  Flex,
-} from '@chakra-ui/react';
+import { Box, Button, Flex, Heading, Image } from '@chakra-ui/react';
 import Link from 'next/link';
 
-const Page404 = () => {
+const Page = () => {
   return (
     <Flex minHeight="70vh" direction="column" justifyContent="center">
       <Box width={{ base: '100%', sm: '70%', md: '60%' }} margin="0 auto">
@@ -32,4 +26,4 @@ const Page404 = () => {
   );
 };
 
-export default Page404;
+export default Page;

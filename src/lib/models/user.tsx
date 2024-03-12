@@ -1,9 +1,13 @@
-type User = {
-  _id: string;
+interface ExtendedUser extends User {
+  id: string;
+  name: string;
+}
+
+interface User {
   first_name: string;
   last_name: string;
-  name: string;
   mail: string;
   phone: string;
-  status: string;
-};
+}
+
+export type { ExtendedUser, User };

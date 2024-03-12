@@ -1,12 +1,12 @@
 import { ArrowForwardIcon } from '@chakra-ui/icons';
 import {
-  LinkBox,
+  Button,
   Card,
   CardBody,
-  Heading,
   CardFooter,
+  Heading,
+  LinkBox,
   LinkOverlay,
-  Button,
   Text,
 } from '@chakra-ui/react';
 

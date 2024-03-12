@@ -1,67 +1,86 @@
 import {
-  VStack,
-  HStack,
+  Box,
+  Button,
   FormControl,
-  FormLabel,
-  Input,
   FormErrorMessage,
   FormHelperText,
-  Textarea,
+  FormLabel,
+  HStack,
+  Input,
+  Radio,
   RadioGroup,
   Stack,
-  Radio,
-  Button,
   Text,
-  Box,
+  Textarea,
+  VStack,
 } from '@chakra-ui/react';
 import { FirebaseError } from 'firebase/app';
 import {
-  runTransaction,
-  collection,
-  query,
-  where,
+  Timestamp,
   getDocs,
-  doc,
+  query,
+  runTransaction,
+  where,
 } from 'firebase/firestore';
-import { Formik, FormikProps, Form, Field } from 'formik';
-import { db } from '../firebase/config';
+import type { FieldProps, FormikHelpers, FormikProps } from 'formik';
+import { Field, Form, Formik } from 'formik';
 import { useRouter } from 'next/navigation';
+
+import { db } from '../firebase/config';
+import { typedDb } from '../utils/db';
+import {
+  validateFirstName,
+  validateLastName,
+  validateMail,
+  validatePhone,
+  validateTitle,
+  validateDescription,
+  validateState,
+  validateToken,
+} from '../utils/validators';
+
+type ChakraInputProps = string | number | readonly string[] | undefined;
+
+interface RegisterFormValues {
+  first_name: string;
+  last_name: string;
+  mail: string;
+  phone: string;
+  title: string;
+  description: string;
+  state: string;
+}
+
+interface TrackFormValues {
+  mail: string;
+  token: string;
+}
 
 function RegistrationFormComponent() {
   const handleSubmit = async (
-    values: {
-      first_name: string;
-      last_name: string;
-      mail: string;
-      phone: string;
-      title: string;
-      description: string;
-      state: string;
-    },
-    { setStatus, resetForm }: { setStatus: Function; resetForm: Function }
+    values: RegisterFormValues,
+    { setStatus, resetForm }: FormikHelpers<RegisterFormValues>
   ) => {
     setStatus();
 
     await runTransaction(db, async (transaction) => {
       let userId: string | undefined;
 
-      const collectionReference = collection(db, 'users');
+      const collectionReference = typedDb.users;
       const usersQuery = query(
         collectionReference,
         where('mail', '==', values.mail)
       );
       const usersQuerySnapshot = await getDocs(usersQuery);
-      usersQuerySnapshot.forEach((doc: any) => {
+      usersQuerySnapshot.forEach((doc) => {
         userId = doc.id;
       });
 
-      console.log(userId);
-
       let userDocumentReference;
       if (!userId) {
-        userDocumentReference = doc(collection(db, 'users'));
+        userDocumentReference = typedDb.user();
       } else {
-        userDocumentReference = doc(collection(db, 'users'), userId);
+        userDocumentReference = typedDb.user(userId);
       }
 
       await transaction.set(userDocumentReference, {
@@ -70,19 +89,19 @@ function RegistrationFormComponent() {
         mail: values.mail,
         phone: values.phone,
       });
-      const itemDocumentReference = doc(collection(db, 'items'));
+      const itemDocumentReference = typedDb.item();
       await transaction.set(itemDocumentReference, {
         name: values.title,
         description: values.description,
         state: values.state,
         user_id: userDocumentReference.id,
       });
-      const reparationDocumentReference = doc(collection(db, 'reparations'));
+      const reparationDocumentReference = typedDb.reparation();
       await transaction.set(reparationDocumentReference, {
         events: [
           {
             state_cycle: 'REGISTERED',
-            timestamp: new Date(),
+            timestamp: Timestamp.fromDate(new Date()),
           },
         ],
         item_id: itemDocumentReference.id,
@@ -101,8 +120,7 @@ function RegistrationFormComponent() {
         });
       })
       .catch((error) => {
-        let code = 'unknown';
-        error instanceof FirebaseError && (code = error.code);
+        const code = error instanceof FirebaseError ? error.code : 'unknown';
 
         console.error(error);
         setStatus({
@@ -111,60 +129,6 @@ function RegistrationFormComponent() {
         });
       });
   };
-
-  function validateFirstName(value: string) {
-    if (!value) {
-      return 'Voornaam is vereist';
-    }
-  }
-
-  function validateLastName(value: string) {
-    if (!value) {
-      return 'Achternaam is vereist';
-    }
-  }
-
-  function validateMail(value: string) {
-    if (!value) {
-      return 'E-mailadres is vereist';
-    } else if (
-      !String(value).match(
-        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
-      )
-    ) {
-      return 'Geef een geldig e-mailadres op a.u.b.';
-    }
-  }
-
-  function validatePhone(value: string) {
-    if (!value) {
-      return 'Telefoonnummer is vereist';
-    } else if (
-      !String(value).match(
-        /^(((\+|00)32[ ]?(?:\(0\)[ ]?)?)|0){1}(4(60|[789]\d)\/?(\s?\d{2}\.?){2}(\s?\d{2})|(\d\/?\s?\d{3}|\d{2}\/?\s?\d{2})(\.?\s?\d{2}){2})$/
-      )
-    ) {
-      return 'Geef een geldig telefoonnummer op a.u.b.';
-    }
-  }
-
-  function validateTitle(value: string) {
-    if (!value) {
-      return 'Omschrijving toestel is vereist';
-    }
-  }
-
-  function validateDescription(value: string) {
-    if (!value) {
-      return 'Omschrijving probleem is vereist';
-    }
-  }
-
-  function validateState(value: string) {
-    if (!value) {
-      return 'Kies een toestand waarin het toestel zich bevind';
-    }
-  }
 
   return (
     <Box w="100%">
@@ -180,16 +144,19 @@ function RegistrationFormComponent() {
         }}
         onSubmit={(values, actions) => handleSubmit(values, actions)}
       >
-        {(props: FormikProps<any>) => (
+        {(props: FormikProps<RegisterFormValues>) => (
           <Form>
             <VStack w="100%" spacing={10} marginY={10}>
               <VStack w="100%" spacing={4}>
-                <HStack w="100%" alignItems={'flex-start'}>
+                <HStack w="100%" alignItems="flex-start">
                   <Field name="first_name" validate={validateFirstName}>
-                    {({ field, form }: any) => (
+                    {({
+                      field,
+                      form,
+                    }: FieldProps<ChakraInputProps, RegisterFormValues>) => (
                       <FormControl
                         isInvalid={
-                          form.errors.first_name && form.touched.first_name
+                          !!form.errors.first_name && !!form.touched.first_name
                         }
                       >
                         <FormLabel>Voornaam</FormLabel>
@@ -205,10 +172,13 @@ function RegistrationFormComponent() {
                     )}
                   </Field>
                   <Field name="last_name" validate={validateLastName}>
-                    {({ field, form }: any) => (
+                    {({
+                      field,
+                      form,
+                    }: FieldProps<ChakraInputProps, RegisterFormValues>) => (
                       <FormControl
                         isInvalid={
-                          form.errors.last_name && form.touched.last_name
+                          !!form.errors.last_name && !!form.touched.last_name
                         }
                       >
                         <FormLabel>Achternaam</FormLabel>
@@ -225,9 +195,12 @@ function RegistrationFormComponent() {
                   </Field>
                 </HStack>
                 <Field name="mail" validate={validateMail}>
-                  {({ field, form }: any) => (
+                  {({
+                    field,
+                    form,
+                  }: FieldProps<ChakraInputProps, RegisterFormValues>) => (
                     <FormControl
-                      isInvalid={form.errors.mail && form.touched.mail}
+                      isInvalid={!!form.errors.mail && !!form.touched.mail}
                     >
                       <FormLabel>E-mailadres</FormLabel>
                       <Input
@@ -246,9 +219,12 @@ function RegistrationFormComponent() {
                 </Field>
 
                 <Field name="phone" validate={validatePhone}>
-                  {({ field, form }: any) => (
+                  {({
+                    field,
+                    form,
+                  }: FieldProps<ChakraInputProps, RegisterFormValues>) => (
                     <FormControl
-                      isInvalid={form.errors.phone && form.touched.phone}
+                      isInvalid={!!form.errors.phone && !!form.touched.phone}
                     >
                       <FormLabel>Telefoonnummer</FormLabel>
                       <Input
@@ -267,9 +243,12 @@ function RegistrationFormComponent() {
                 </Field>
 
                 <Field name="title" validate={validateTitle}>
-                  {({ field, form }: any) => (
+                  {({
+                    field,
+                    form,
+                  }: FieldProps<ChakraInputProps, RegisterFormValues>) => (
                     <FormControl
-                      isInvalid={form.errors.title && form.touched.title}
+                      isInvalid={!!form.errors.title && !!form.touched.title}
                     >
                       <FormLabel>Omschrijving toestel</FormLabel>
                       <Input {...field} placeholder="Stofzuiger" />
@@ -279,10 +258,13 @@ function RegistrationFormComponent() {
                 </Field>
 
                 <Field name="description" validate={validateDescription}>
-                  {({ field, form }: any) => (
+                  {({
+                    field,
+                    form,
+                  }: FieldProps<ChakraInputProps, RegisterFormValues>) => (
                     <FormControl
                       isInvalid={
-                        form.errors.description && form.touched.description
+                        !!form.errors.description && !!form.touched.description
                       }
                     >
                       <FormLabel>Omschrijving probleem</FormLabel>
@@ -302,9 +284,12 @@ function RegistrationFormComponent() {
                 </Field>
 
                 <Field name="state" validate={validateState}>
-                  {({ field, form }: any) => (
+                  {({
+                    field,
+                    form,
+                  }: FieldProps<string | undefined, RegisterFormValues>) => (
                     <FormControl
-                      isInvalid={form.errors.state && form.touched.state}
+                      isInvalid={!!form.errors.state && !!form.touched.state}
                     >
                       <FormLabel>Toestand toestel</FormLabel>
                       <RadioGroup {...field}>
@@ -348,28 +333,28 @@ function TrackFormComponent() {
   const { push } = useRouter();
 
   const handleSubmit = async (
-    values: { mail: string; token: string },
-    { setStatus, resetForm }: { setStatus: Function; resetForm: Function }
+    values: TrackFormValues,
+    { setStatus, resetForm }: FormikHelpers<TrackFormValues>
   ) => {
     setStatus();
-    await runTransaction(db, async (transaction) => {
+    try {
       let userId: string = '';
-      let reparations: Record<string, string> = {};
+      const reparations: Record<string, string> = {};
 
       const itemIdsFromToken: string[] = [];
       const itemIdsFromUser: string[] = [];
 
-      const reparationsCollectionReference = collection(db, 'reparations');
+      const reparationsCollectionReference = typedDb.reparations;
       const tokensQuery = query(
         reparationsCollectionReference,
         where('token', '==', values.token)
       );
       const tokensQuerySnapshot = await getDocs(tokensQuery);
-      tokensQuerySnapshot.forEach((doc: any) => {
+      tokensQuerySnapshot.forEach((doc) => {
         itemIdsFromToken.push(doc.data().item_id);
         reparations[doc.data().item_id] = doc.id;
       });
-      if (itemIdsFromToken.length == 0) {
+      if (itemIdsFromToken.length === 0) {
         setStatus({
           status: 'ERROR',
           message:
@@ -378,13 +363,13 @@ function TrackFormComponent() {
         return;
       }
 
-      const usersCollectionReference = collection(db, 'users');
+      const usersCollectionReference = typedDb.users;
       const userQuery = query(
         usersCollectionReference,
         where('mail', '==', values.mail)
       );
       const userQuerySnapshot = await getDocs(userQuery);
-      userQuerySnapshot.forEach((doc: any) => {
+      userQuerySnapshot.forEach((doc) => {
         userId = doc.id;
       });
       if (!userId) {
@@ -396,13 +381,13 @@ function TrackFormComponent() {
         return;
       }
 
-      const itemsCollectionReference = collection(db, 'items');
+      const itemsCollectionReference = typedDb.items;
       const itemsQuery = query(
         itemsCollectionReference,
         where('user_id', '==', userId)
       );
       const itemsQuerySnapshot = await getDocs(itemsQuery);
-      itemsQuerySnapshot.forEach((doc: any) => {
+      itemsQuerySnapshot.forEach((doc) => {
         itemIdsFromUser.push(doc.id);
       });
 
@@ -410,7 +395,7 @@ function TrackFormComponent() {
         itemIdsFromUser.includes(value)
       );
 
-      if (intersectedItemIds.length == 0) {
+      if (intersectedItemIds.length === 0) {
         setStatus({
           status: 'ERROR',
           message:
@@ -424,40 +409,17 @@ function TrackFormComponent() {
         status: 'SUCCESS',
         message: 'Even geduld, we sturen u door naar de tracking pagina.',
       });
-      push('/track/' + reparations[intersectedItemIds[0]]);
-    }).catch((error) => {
-      let code = 'unknown';
-      error instanceof FirebaseError && (code = error.code);
+      push(`/track/${reparations[intersectedItemIds[0]]}`);
+    } catch (error) {
+      const code = error instanceof FirebaseError ? error.code : 'unknown';
 
       console.error(error);
       setStatus({
         status: 'ERROR',
         message: `Oeps, er liep iets mis. Probeer later opnieuw. (${code})`,
       });
-    });
+    }
   };
-
-  function validateMail(value: string) {
-    if (!value) {
-      return 'E-mailadres is vereist';
-    } else if (
-      !String(value).match(
-        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
-      )
-    ) {
-      return 'Geef een geldig e-mailadres op a.u.b.';
-    }
-  }
-
-  function validateToken(value: string) {
-    if (!value) {
-      return 'Volgnummer is vereist';
-    } else if (String(value).match(/^[a-z][0-9]*$/)) {
-      return 'Enkel hoofdletters zijn toegelaten.';
-    } else if (!String(value).match(/^[A-Z][0-9]{2}$/)) {
-      return 'Geef een geldig volgnummer op a.u.b.';
-    }
-  }
 
   return (
     <Box w="100%">
@@ -468,14 +430,17 @@ function TrackFormComponent() {
         }}
         onSubmit={(values, actions) => handleSubmit(values, actions)}
       >
-        {(props: FormikProps<any>) => (
+        {(props: FormikProps<TrackFormValues>) => (
           <Form>
             <VStack w="100%" spacing={10} marginY={10}>
               <VStack w="100%" spacing={4}>
                 <Field name="mail" validate={validateMail}>
-                  {({ field, form }: any) => (
+                  {({
+                    field,
+                    form,
+                  }: FieldProps<ChakraInputProps, TrackFormValues>) => (
                     <FormControl
-                      isInvalid={form.errors.mail && form.touched.mail}
+                      isInvalid={!!form.errors.mail && !!form.touched.mail}
                     >
                       <FormLabel>E-mailadres</FormLabel>
                       <Input
@@ -492,9 +457,12 @@ function TrackFormComponent() {
                   )}
                 </Field>
                 <Field name="token" validate={validateToken}>
-                  {({ field, form }: any) => (
+                  {({
+                    field,
+                    form,
+                  }: FieldProps<ChakraInputProps, TrackFormValues>) => (
                     <FormControl
-                      isInvalid={form.errors.token && form.touched.token}
+                      isInvalid={!!form.errors.token && !!form.touched.token}
                     >
                       <FormLabel>Volgnummer</FormLabel>
                       <HStack>

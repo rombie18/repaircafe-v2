@@ -1,3 +1,3 @@
-import Home from '~/lib/pages/kiosk';
+import Page from '~/lib/pages/kiosk';
 
-export default Home;
+export default Page;
