@@ -39,3 +39,5 @@ jobs:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_REPAIR_CAFE_V2 }}'
           channelId: live
           projectId: repair-cafe-v2
+          env:
+            FIREBASE_CLI_EXPERIMENTS: webframeworks
