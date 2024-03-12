@@ -357,8 +357,7 @@ function TrackFormComponent() {
       if (itemIdsFromToken.length === 0) {
         setStatus({
           status: 'ERROR',
-          message:
-            'We konden geen reparatie vinden met deze combinatie van e-mailadres en volgnummer.',
+          message: 'We konden geen reparatie vinden met deze volgnummer.',
         });
         return;
       }
@@ -375,8 +374,7 @@ function TrackFormComponent() {
       if (!userId) {
         setStatus({
           status: 'ERROR',
-          message:
-            'We konden geen reparatie vinden met deze combinatie van e-mailadres en volgnummer.',
+          message: 'We konden geen gebruiker vinden met dit e-mailadres.',
         });
         return;
       }
