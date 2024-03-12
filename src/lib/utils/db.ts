@@ -22,7 +22,7 @@ const typedCollection = <T>(collectionPath: string) =>
 
 const typedDocument = <T>(collectionPath: string, documentId?: string) => {
   if (!documentId) {
-    return doc(db, collectionPath).withConverter(converter<T>());
+    return doc(collection(db, collectionPath)).withConverter(converter<T>());
   }
   return doc(db, collectionPath, documentId).withConverter(converter<T>());
 };

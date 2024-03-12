@@ -89,6 +89,7 @@ function RegistrationFormComponent() {
         mail: values.mail,
         phone: values.phone,
       });
+
       const itemDocumentReference = typedDb.item();
       await transaction.set(itemDocumentReference, {
         name: values.title,
@@ -96,6 +97,7 @@ function RegistrationFormComponent() {
         state: values.state,
         user_id: userDocumentReference.id,
       });
+
       const reparationDocumentReference = typedDb.reparation();
       await transaction.set(reparationDocumentReference, {
         events: [
