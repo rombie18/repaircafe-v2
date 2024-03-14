@@ -12,9 +12,9 @@ import {
   useToast,
 } from '@chakra-ui/react';
 import { onSnapshot } from 'firebase/firestore';
-import { useSearchParams, notFound } from 'next/navigation';
+import { notFound, useSearchParams } from 'next/navigation';
 import type { Dispatch, SetStateAction } from 'react';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 
 import ReparationStepsComponent from '~/lib/components/ReparationSteps';
 import { AutoReparationTagComponent } from '~/lib/components/ReparationTag';
@@ -138,4 +138,12 @@ const Page = () => {
   return <ErrorWidgetComponent />;
 };
 
-export default Page;
+function Wrapper() {
+  return (
+    <Suspense fallback={<LoadingWidgetComponent />}>
+      <Page />
+    </Suspense>
+  );
+}
+
+export default Wrapper;

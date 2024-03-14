@@ -3,16 +3,29 @@ import {
   AlertDescription,
   AlertIcon,
   AlertTitle,
-  Center,
   Flex,
+  Spinner,
   Text,
+  VStack,
 } from '@chakra-ui/react';
 
 function LoadingWidgetComponent() {
   return (
-    <Center>
-      <Text>Laden...</Text>
-    </Center>
+    <Flex
+      h="100%"
+      direction="row"
+      alignItems="center"
+      justifyContent="center"
+      gap={4}
+      mb={8}
+      paddingTop={10}
+      flexWrap="wrap"
+    >
+      <VStack>
+        <Spinner size="xl" />
+        <Text>Laden...</Text>
+      </VStack>
+    </Flex>
   );
 }
 
