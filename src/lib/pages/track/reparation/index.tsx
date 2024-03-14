@@ -11,62 +11,81 @@ import {
   VStack,
   useToast,
 } from '@chakra-ui/react';
-import { FirebaseError } from 'firebase/app';
 import { onSnapshot } from 'firebase/firestore';
+import { useSearchParams, notFound } from 'next/navigation';
 import type { Dispatch, SetStateAction } from 'react';
 import { useEffect, useState } from 'react';
 
 import ReparationStepsComponent from '~/lib/components/ReparationSteps';
 import { AutoReparationTagComponent } from '~/lib/components/ReparationTag';
-import type { ExtendedReparation, Reparation } from '~/lib/models/reparation';
+import {
+  LoadingWidgetComponent,
+  ErrorWidgetComponent,
+} from '~/lib/components/Widgets';
+import type { ExtendedReparation } from '~/lib/models/reparation';
 import { typedDb } from '~/lib/utils/db';
 
-interface PageProps {
-  params: {
-    id: string;
-  };
+interface ReparationResult {
+  status: string;
+  reparation: ExtendedReparation | undefined;
 }
 
-const Page = ({ params }: PageProps) => {
+const Page = () => {
   const toast = useToast();
-  const { id } = params;
-  const [reparation, setReparation] = useState<Reparation>();
+  const [reparationResult, setReparationResult] = useState<ReparationResult>();
+
+  const searchParams = useSearchParams();
+  const id = searchParams.get('id') ?? '';
 
   useEffect(() => {
     const getData = (
-      setData: Dispatch<SetStateAction<Reparation | undefined>>
+      setData: Dispatch<SetStateAction<ReparationResult | undefined>>
     ) => {
       onSnapshot(
         typedDb.reparation(id),
         (snapshot) => {
           if (!snapshot.exists()) {
-            throw Error();
+            setData({
+              status: 'NOT_FOUND',
+              reparation: undefined,
+            });
+            return;
           }
           const result: ExtendedReparation = {
             id: snapshot.id,
             ...snapshot.data(),
           };
-          setData(result);
+          setData({
+            status: 'SUCCESS',
+            reparation: result,
+          });
         },
         (error) => {
-          const code = error instanceof FirebaseError ? error.code : 'unknown';
-
           console.error(error);
-          toast({
-            title: `Oeps!`,
-            description: `Er liep iets mis bij het ophalen van gegevens. (${code})`,
-            status: 'error',
-            isClosable: true,
-            duration: 10000,
+          setData({
+            status: 'ERROR',
+            reparation: undefined,
           });
         }
       );
     };
 
-    getData(setReparation);
+    getData(setReparationResult);
   }, [id, toast]);
 
-  if (reparation) {
+  if (!reparationResult) {
+    return <LoadingWidgetComponent />;
+  }
+
+  if (reparationResult.status === 'NOT_FOUND') {
+    return notFound();
+  }
+
+  if (reparationResult.status === 'ERROR' || !reparationResult.reparation) {
+    return <ErrorWidgetComponent />;
+  }
+
+  if (reparationResult.status === 'SUCCESS') {
     return (
       <>
         <VStack paddingY={6} align="start">
@@ -88,16 +107,23 @@ const Page = ({ params }: PageProps) => {
           flex={1}
         >
           <VStack w="100%" spacing={10} marginY={10}>
-            <ReparationStepsComponent reparation={reparation} />
+            <ReparationStepsComponent
+              reparation={reparationResult.reparation}
+            />
 
             <FormControl>
               <FormLabel>Toestand herstelling</FormLabel>
-              <AutoReparationTagComponent reparation={reparation} />
+              <AutoReparationTagComponent
+                reparation={reparationResult.reparation}
+              />
             </FormControl>
 
             <FormControl>
               <FormLabel>Opmerkingen</FormLabel>
-              <Textarea isDisabled value={reparation.remarks} />
+              <Textarea
+                isDisabled
+                value={reparationResult.reparation.remarks}
+              />
               <FormHelperText>
                 Als de technieker of een medewerker opmerkingen heeft
                 achtergelaten, kan je deze in bovenstaand vak lezen.
@@ -109,8 +135,7 @@ const Page = ({ params }: PageProps) => {
     );
   }
 
-  // TODO update loading indicator
-  return <Text>Laden...</Text>;
+  return <ErrorWidgetComponent />;
 };
 
 export default Page;

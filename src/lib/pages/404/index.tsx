@@ -4,7 +4,7 @@ import Link from 'next/link';
 const Page = () => {
   return (
     <Flex minHeight="70vh" direction="column" justifyContent="center">
-      <Box width={{ base: '100%', sm: '70%', md: '60%' }} margin="0 auto">
+      <Box width={{ base: '100%', sm: '70%', md: '50%' }} margin="0 auto">
         <Image
           src="/404 Error-pana.svg"
           alt="Error 404 not found Illustration"

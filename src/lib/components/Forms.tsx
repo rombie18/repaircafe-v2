@@ -409,7 +409,7 @@ function TrackFormComponent() {
         status: 'SUCCESS',
         message: 'Even geduld, we sturen u door naar de tracking pagina.',
       });
-      push(`/track/${reparations[intersectedItemIds[0]]}`);
+      push(`/track/reparation?id=${reparations[intersectedItemIds[0]]}`);
     } catch (error) {
       const code = error instanceof FirebaseError ? error.code : 'unknown';
 

@@ -13,12 +13,12 @@ import {
 } from '@chakra-ui/react';
 import { useEffect, useMemo } from 'react';
 
-import type { Reparation } from '../models/reparation';
+import type { ExtendedReparation, Reparation } from '../models/reparation';
 
 export default function ReparationStepsComponent({
   reparation,
 }: {
-  reparation: Reparation;
+  reparation: Reparation | ExtendedReparation;
 }) {
   const steps = useMemo(
     () => [
