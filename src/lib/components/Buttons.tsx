@@ -43,7 +43,7 @@ import {
 import NextLink from 'next/link';
 import { useRef, useState } from 'react';
 
-import { db } from '../firebase/config';
+import { db } from '../utils/firebase';
 import type { ExtendedReparation } from '../models/reparation';
 import { typedDb } from '../utils/db';
 import { generateRandomToken } from '../utils/functions';

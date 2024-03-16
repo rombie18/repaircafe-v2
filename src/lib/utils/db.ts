@@ -7,7 +7,7 @@ import {
   doc,
 } from 'firebase/firestore';
 
-import { db } from '../firebase/config';
+import { db } from './firebase';
 import type { Item } from '../models/item';
 import type { Reparation } from '../models/reparation';
 import type { User } from '../models/user';
