@@ -124,6 +124,7 @@ function TokenMarqueeComponent({
             <TokenComponent reparation={reparation} color={color} />
           </Box>
         ))}
+        <Box mx={1} />
       </Marquee>
     </HStack>
   );

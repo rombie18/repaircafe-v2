@@ -232,7 +232,7 @@ function RegistrationFormComponent() {
                       <Input
                         {...field}
                         type="tel"
-                        placeholder="470 12 34 56"
+                        placeholder="0470 12 34 56"
                         autoComplete="tel"
                       />
                       <FormHelperText>

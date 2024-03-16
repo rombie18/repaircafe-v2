@@ -11,11 +11,17 @@ const Page = () => {
         <Heading>Repair Café</Heading>
         <Text>
           Welkom bij het Repair Café, georganiseerd door Thomas More Geel en KU
-          Leuven. Ten voordele van het goede doel X organiseren we een
-          &quot;reparatiedag&quot; waarbij we uw stuk of niet goed werkend
-          toestel proberen te herstellen. Een team van vrijwillig geëngageerde
-          studenten en docenten zal uw toestel onder handen nemen en proberen te
-          repareren.
+          Leuven. Ten voordele van de kinderafdeling van het St.-Dimpna
+          ziekenhuis, organiseren we een &quot;reparatiedag&quot; waarbij we uw
+          stuk of niet goed werkend toestel proberen te herstellen. Een team van
+          vrijwillig geëngageerde studenten en docenten zal uw toestel onder
+          handen nemen en proberen te repareren.
+        </Text>
+        <Text>
+          De 2de editie van het Repair Café XL zal doorgaan op
+          <b> 27 maart </b>in de <b>Agora van Thomas More campus Geel</b>. U
+          bent welkom om langs te komen om uw kapot toestel te laten herstellen,
+          maar ook voor vragen rond software, financieel advies, etc.
         </Text>
       </VStack>
 

@@ -559,8 +559,8 @@ function SetFinishedActionButtonComponent({
             </FormControl>
 
             <FormControl mt={8}>
-              Opgelet, de eigenaar wordt opgeroepen via mail en op de schermen
-              om zich naar de balie te begeven.
+              Opgelet, de eigenaar wordt opgeroepen via mail en op de
+              infoschermen om zich naar de balie te begeven.
             </FormControl>
           </ModalBody>
 

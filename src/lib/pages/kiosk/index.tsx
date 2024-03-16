@@ -13,6 +13,7 @@ import {
 } from '~/lib/components/Tokens';
 import type { ExtendedReparation } from '~/lib/models/reparation';
 import { typedDb } from '~/lib/utils/db';
+import { sortReparationsOnEvent } from '~/lib/utils/functions';
 
 const Page = () => {
   const toast = useToast();
@@ -57,13 +58,13 @@ const Page = () => {
   }, [toast]);
 
   return (
-    <Box display="flex" flexDirection="column">
+    <Box display="flex" flexDirection="column" h="100%">
       <Box flex="1" display="flex" gap={6}>
         <Box flex="1" py="4">
           <TokenGridComponent
-            reparations={reparations.filter(
-              (reparation) => reparation.state_cycle === 'PENDING'
-            )}
+            reparations={reparations
+              .filter((reparation) => reparation.state_cycle === 'PENDING')
+              .sort((a, b) => sortReparationsOnEvent(a, b, 'PENDING'))}
             heading="Reparatie bezig"
             icon={<SettingsIcon />}
             color="yellow.400"
@@ -72,9 +73,9 @@ const Page = () => {
 
         <Box flex="1" py="4">
           <TokenGridComponent
-            reparations={reparations.filter(
-              (reparation) => reparation.state_cycle === 'FINISHED'
-            )}
+            reparations={reparations
+              .filter((reparation) => reparation.state_cycle === 'FINISHED')
+              .sort((a, b) => sortReparationsOnEvent(a, b, 'FINISHED'))}
             heading="Reparatie voltooid"
             icon={<CheckIcon />}
             color="green.400"
@@ -82,11 +83,11 @@ const Page = () => {
         </Box>
       </Box>
 
-      <Box pt="4">
+      <Box pt="4" paddingTop="0 auto">
         <TokenMarqueeComponent
-          reparations={reparations.filter(
-            (reparation) => reparation.state_cycle === 'QUEUED'
-          )}
+          reparations={reparations
+            .filter((reparation) => reparation.state_cycle === 'QUEUED')
+            .sort((a, b) => sortReparationsOnEvent(a, b, 'QUEUED'))}
           heading="Wachtrij:"
           color="gray.400"
         />

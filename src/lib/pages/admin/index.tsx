@@ -11,17 +11,18 @@ import {
   SpinnerIcon,
   UnlockIcon,
 } from '@chakra-ui/icons';
-import { Badge, Box, Button, HStack, useToast } from '@chakra-ui/react';
+import { Badge, Box, Button, HStack, VStack, useToast } from '@chakra-ui/react';
+import type { SortingState } from '@tanstack/react-table';
 import { createColumnHelper } from '@tanstack/react-table';
 import { FirebaseError } from 'firebase/app';
 import { getDoc, onSnapshot } from 'firebase/firestore';
 import { DateTime } from 'luxon';
+import { useRouter } from 'next/navigation';
 import type { Dispatch, SetStateAction } from 'react';
 import { useEffect, useState } from 'react';
 
 import {
   DeleteButtonComponent,
-  EditButtonComponent,
   SetCollectedActionButtonComponent,
   SetDepositedActionButtonComponent,
   SetFinishedActionButtonComponent,
@@ -29,6 +30,7 @@ import {
   SetQueuedActionButtonComponent,
   SetReleasedActionButtonComponent,
 } from '~/lib/components/Buttons';
+import DebouncedInputComponent from '~/lib/components/DebouncedInput';
 import { ExpandableReparationTagComponent } from '~/lib/components/ReparationTag';
 import type { ExtendedItem, Item } from '~/lib/models/item';
 import type { ExtendedReparation } from '~/lib/models/reparation';
@@ -42,6 +44,13 @@ interface Document {
   reparation: ExtendedReparation;
   user: ExtendedUser;
 }
+
+const initialSortingState = [
+  {
+    id: 'deposited_timestamp',
+    desc: false,
+  },
+];
 
 const columnHelper = createColumnHelper<Document>();
 
@@ -109,11 +118,43 @@ const columns = [
     header: 'Eigenaar',
   }),
   columnHelper.accessor('reparation.events', {
-    id: 'events',
+    id: 'deposited_timestamp',
+    sortingFn: (rowA, rowB) => {
+      const eventA = rowA.original.reparation.events.filter(
+        (item) => item.state_cycle === 'DEPOSITED'
+      )[0];
+      const eventB = rowB.original.reparation.events.filter(
+        (item) => item.state_cycle === 'DEPOSITED'
+      )[0];
+
+      if (!eventA || !eventB) {
+        return 1;
+      }
+      if (
+        rowA.original.reparation.state_token === 'RELEASED' &&
+        rowA.original.reparation.state_cycle === 'COLLECTED'
+      ) {
+        return 1;
+      }
+      if (
+        rowB.original.reparation.state_token === 'RELEASED' &&
+        rowB.original.reparation.state_cycle === 'COLLECTED'
+      ) {
+        return 1;
+      }
+      if (eventA.timestamp.toMillis() - eventB.timestamp.toMillis() > 0) {
+        return 1;
+      }
+      if (eventA.timestamp.toMillis() - eventB.timestamp.toMillis() < 0) {
+        return -1;
+      }
+      return 0;
+    },
     cell: (info) => {
       const event = info
         .getValue()
         .filter((item) => item.state_cycle === 'DEPOSITED')[0];
+
       if (event) {
         return DateTime.fromJSDate(event.timestamp.toDate())
           .setLocale('nl')
@@ -189,7 +230,6 @@ const columns = [
                 colorScheme="gray"
                 text="In ontvangst nemen"
               />
-              <EditButtonComponent />
               <DeleteButtonComponent reparation={reparation} />
             </HStack>
           );
@@ -202,7 +242,6 @@ const columns = [
                 colorScheme="red"
                 text="In wachtrij zetten"
               />
-              <EditButtonComponent />
               <DeleteButtonComponent reparation={reparation} />
             </HStack>
           );
@@ -215,7 +254,6 @@ const columns = [
                 colorScheme="yellow"
                 text="Reparatie starten"
               />
-              <EditButtonComponent />
               <DeleteButtonComponent reparation={reparation} />
             </HStack>
           );
@@ -228,7 +266,6 @@ const columns = [
                 colorScheme="green"
                 text="Eigenaar oproepen"
               />
-              <EditButtonComponent />
               <DeleteButtonComponent reparation={reparation} />
             </HStack>
           );
@@ -241,7 +278,6 @@ const columns = [
                 colorScheme="green"
                 text="Als opgehaald markeren"
               />
-              <EditButtonComponent />
               <DeleteButtonComponent reparation={reparation} />
             </HStack>
           );
@@ -255,7 +291,6 @@ const columns = [
                   colorScheme="gray"
                   text="Volgnummer vrijgeven"
                 />
-                <EditButtonComponent />
                 <DeleteButtonComponent reparation={reparation} />
               </HStack>
             );
@@ -271,7 +306,7 @@ const columns = [
               >
                 Afgehandeld!
               </Button>
-              <EditButtonComponent />
+
               <DeleteButtonComponent reparation={reparation} />
             </HStack>
           );
@@ -358,9 +393,30 @@ const Page = () => {
     getData(setDocuments);
   }, [toast]);
 
+  const { push } = useRouter();
+  const [globalFilter, setGlobalFilter] = useState('');
+  const [sorting, setSorting] = useState<SortingState>(initialSortingState);
+
   return (
-    <Box overflowX="auto">
-      <DataTable columns={columns} data={documents} />
+    <Box maxWidth="100%" overflowX="auto">
+      <VStack spacing={6}>
+        <HStack w="100%">
+          <DebouncedInputComponent
+            placeholder="Typ om te zoeken..."
+            value={globalFilter ?? ''}
+            onChange={(value) => setGlobalFilter(String(value))}
+          />
+          <Button onClick={() => push(`/kiosk`)}>Kiosk openen</Button>
+        </HStack>
+        <DataTable
+          columns={columns}
+          data={documents}
+          globalFilter={globalFilter}
+          setGlobalFilter={setGlobalFilter}
+          sorting={sorting}
+          setSorting={setSorting}
+        />
+      </VStack>
     </Box>
   );
 };

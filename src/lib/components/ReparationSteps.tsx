@@ -10,6 +10,7 @@ import {
   StepTitle,
   Stepper,
   useSteps,
+  Text,
 } from '@chakra-ui/react';
 import { useEffect, useMemo } from 'react';
 
@@ -90,9 +91,11 @@ export default function ReparationStepsComponent({
             />
           </StepIndicator>
 
-          <Box flexShrink="0">
+          <Box>
             <StepTitle>{step.title}</StepTitle>
-            <StepDescription>{step.description}</StepDescription>
+            <StepDescription>
+              <Text overflowWrap="break-word">{step.description}</Text>
+            </StepDescription>
           </Box>
 
           <StepSeparator />

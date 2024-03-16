@@ -51,10 +51,12 @@ const Page = () => {
             });
             return;
           }
+
           const result: ExtendedReparation = {
             id: snapshot.id,
             ...snapshot.data(),
           };
+
           setData({
             status: 'SUCCESS',
             reparation: result,

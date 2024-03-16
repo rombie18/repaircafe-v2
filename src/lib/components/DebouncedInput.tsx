@@ -1,4 +1,10 @@
-import { Button, Input, InputGroup, InputRightElement } from '@chakra-ui/react';
+import { DeleteIcon } from '@chakra-ui/icons';
+import {
+  IconButton,
+  Input,
+  InputGroup,
+  InputRightElement,
+} from '@chakra-ui/react';
 import type { InputHTMLAttributes } from 'react';
 import { useEffect, useState } from 'react';
 
@@ -27,16 +33,22 @@ export default function DebouncedInputComponent({
   }, [debounce, onChange, value]);
 
   return (
-    <InputGroup>
+    <InputGroup flex="1">
       <Input
         placeholder={placeholder}
         value={value}
         onChange={(e) => setValue(e.target.value)}
       />
-      <InputRightElement width="6rem" mr="0.5rem">
-        <Button h="1.75rem" size="sm" onClick={() => setValue('')}>
-          Leegmaken
-        </Button>
+      <InputRightElement mr="0.5rem">
+        <IconButton
+          h="1.75rem"
+          size="sm"
+          onClick={() => setValue('')}
+          isRound
+          variant="solid"
+          aria-label="Leegmaken"
+          icon={<DeleteIcon />}
+        />
       </InputRightElement>
     </InputGroup>
   );
