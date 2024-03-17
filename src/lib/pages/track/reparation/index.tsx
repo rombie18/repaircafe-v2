@@ -93,9 +93,9 @@ const Page = () => {
         <VStack paddingY={6} align="start">
           <Heading>Volg je toestel</Heading>
           <Text>
-            Nadat je je toestel hebt binnengebracht bij onze stand, kan je in
-            real-time de reparatie volgen. Dit kan eenvoudig door in onderstaand
-            formulier je gegevens in te vullen die je bij afgifte achter liet.
+            Hieronder vind je een real-time overzicht van de reparatie van je
+            toestel. Je kan de actuele status opvolgen en extra informatie,
+            zoals opmerkingen van de technieker, bekijken.
           </Text>
         </VStack>
 

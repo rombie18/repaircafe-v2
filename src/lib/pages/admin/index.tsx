@@ -409,6 +409,7 @@ const Page = () => {
             value={globalFilter ?? ''}
             onChange={(value) => setGlobalFilter(String(value))}
           />
+          <Button onClick={() => push(`/register`)}>Item registreren</Button>
           <Button onClick={() => push(`/kiosk`)}>Kiosk openen</Button>
         </HStack>
         <DataTable
