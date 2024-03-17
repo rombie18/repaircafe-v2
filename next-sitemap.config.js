@@ -1,6 +1,6 @@
 /** @type {import('next-sitemap').IConfig} */
 const NextSitemapConfig = {
-  siteUrl: "repair-cafe-v2.web.app",
+  siteUrl: process.env.SITE_DOMAIN,
   generateRobotsTxt: true,
 };
 

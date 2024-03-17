@@ -1,6 +1,6 @@
 <h1 align="center">Welcome to Repair Café 👋</h1>
 <p>
-  <img alt="Version" src="https://img.shields.io/badge/version-2.0.0-blue.svg?cacheSeconds=2592000" />
+  <img alt="Version" src="https://img.shields.io/badge/version-2.1.0-blue.svg?cacheSeconds=2592000" />
   <img src="https://img.shields.io/badge/node-%3E%3D16.x.x-blue.svg" />
   <img src="https://img.shields.io/badge/pnpm-%3E%3D8-blue.svg" />
   <a href="#" target="_blank">

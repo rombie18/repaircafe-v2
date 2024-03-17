@@ -34,6 +34,7 @@ import {
 } from '@chakra-ui/react';
 import { FirebaseError } from 'firebase/app';
 import {
+  Timestamp,
   arrayUnion,
   getDocs,
   query,
@@ -43,10 +44,16 @@ import {
 import NextLink from 'next/link';
 import { useRef, useState } from 'react';
 
-import { db } from '../utils/firebase';
+import type { ExtendedItem } from '../models/item';
 import type { ExtendedReparation } from '../models/reparation';
+import type { ExtendedUser } from '../models/user';
 import { typedDb } from '../utils/db';
+import { db } from '../utils/firebase';
 import { generateRandomToken } from '../utils/functions';
+import {
+  sendReparationDepositedMail,
+  sendReparationFinishedMail,
+} from '../utils/mailer';
 
 import { RadioReparationTagComponent } from './ReparationTag';
 
@@ -143,30 +150,65 @@ function DeleteButtonComponent({
   );
 }
 
-function SetPendingActionButtonComponent({
+function SetDepositedActionButtonComponent({
+  item,
   reparation,
+  user,
   colorScheme,
   icon,
   text,
 }: {
+  item: ExtendedItem;
   reparation: ExtendedReparation;
+  user: ExtendedUser;
   colorScheme: string;
   icon: JSX.Element;
   text: string;
 }) {
   const toast = useToast();
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const updateReparation = async () => {
     setIsLoading(true);
     await runTransaction(db, async (transaction) => {
+      const reservedTokens: Set<string> = new Set();
+
+      const collectionReference = typedDb.reparations;
+      const tokensQuery = query(
+        collectionReference,
+        where('state_token', '==', 'RESERVED')
+      );
+      const tokensQuerySnapshot = await getDocs(tokensQuery);
+      tokensQuerySnapshot.forEach((doc) => {
+        reservedTokens.add(doc.data().token);
+      });
+
+      const generatedtoken = generateRandomToken(reservedTokens);
+
       const documentReference = typedDb.reparation(reparation.id);
       await transaction.update(documentReference, {
-        state_cycle: 'PENDING',
+        token: generatedtoken,
+        state_cycle: 'DEPOSITED',
+        state_token: 'RESERVED',
         events: arrayUnion({
-          state_cycle: 'PENDING',
+          state_cycle: 'DEPOSITED',
           timestamp: new Date(),
         }),
       });
+
+      const newReparation: ExtendedReparation = {
+        ...reparation,
+        ...{
+          token: generatedtoken,
+          state_cycle: 'DEPOSITED',
+          state_token: 'RESERVED',
+        },
+      };
+      newReparation.events.push({
+        state_cycle: 'DEPOSITED',
+        timestamp: Timestamp.fromDate(new Date()),
+      });
+      await sendReparationDepositedMail(item, newReparation, user);
     })
       .catch((error) => {
         const code = error instanceof FirebaseError ? error.code : 'unknown';
@@ -254,7 +296,227 @@ function SetQueuedActionButtonComponent({
   );
 }
 
-function SetDepositedActionButtonComponent({
+function SetPendingActionButtonComponent({
+  reparation,
+  colorScheme,
+  icon,
+  text,
+}: {
+  reparation: ExtendedReparation;
+  colorScheme: string;
+  icon: JSX.Element;
+  text: string;
+}) {
+  const toast = useToast();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const updateReparation = async () => {
+    setIsLoading(true);
+    await runTransaction(db, async (transaction) => {
+      const documentReference = typedDb.reparation(reparation.id);
+      await transaction.update(documentReference, {
+        state_cycle: 'PENDING',
+        events: arrayUnion({
+          state_cycle: 'PENDING',
+          timestamp: new Date(),
+        }),
+      });
+    })
+      .catch((error) => {
+        const code = error instanceof FirebaseError ? error.code : 'unknown';
+
+        console.error(error);
+        toast({
+          title: `Oeps!`,
+          description: `Er liep iets mis bij het updaten van een item. (${code})`,
+          status: 'error',
+          isClosable: true,
+          duration: 10000,
+        });
+      })
+      .finally(() => setIsLoading(false));
+  };
+
+  return (
+    <Button
+      w="100%"
+      leftIcon={icon}
+      colorScheme={colorScheme}
+      variant="solid"
+      size="sm"
+      onClick={updateReparation}
+      isLoading={isLoading}
+    >
+      {text}
+    </Button>
+  );
+}
+function SetFinishedActionButtonComponent({
+  item,
+  reparation,
+  user,
+  colorScheme,
+  icon,
+  text,
+}: {
+  item: ExtendedItem;
+  reparation: ExtendedReparation;
+  user: ExtendedUser;
+  colorScheme: string;
+  icon: JSX.Element;
+  text: string;
+}) {
+  const radios = [
+    {
+      key: 'SUCCESS',
+      text: 'Reparatie gelukt',
+      colorScheme: 'green',
+      icon: <CheckIcon />,
+    },
+    {
+      key: 'PARTIAL',
+      text: 'Reparatie gedeeltelijk gelukt',
+      colorScheme: 'yellow',
+      icon: <MinusIcon />,
+    },
+    {
+      key: 'FAIL',
+      text: 'Reparatie niet gelukt',
+      colorScheme: 'red',
+      icon: <CloseIcon />,
+    },
+    {
+      key: 'UNKNOWN',
+      text: 'Status onbekend',
+      colorScheme: 'gray',
+      icon: <QuestionIcon />,
+    },
+  ];
+
+  const toast = useToast();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { value, getRadioProps } = useRadioGroup();
+  const [remarks, setRemarks] = useState<string>('');
+
+  const updateReparation = async () => {
+    setIsLoading(true);
+
+    const documentReference = typedDb.reparation(reparation.id);
+    await runTransaction(db, async (transaction) => {
+      await transaction.update(documentReference, {
+        state_cycle: 'FINISHED',
+        state_reparation: value,
+        remarks,
+        events: arrayUnion({
+          state_cycle: 'FINISHED',
+          timestamp: new Date(),
+        }),
+      });
+
+      const newReparation: ExtendedReparation = {
+        ...reparation,
+        ...{
+          state_cycle: 'FINISHED',
+          state_reparation: value.toString(),
+          remarks,
+        },
+      };
+      newReparation.events.push({
+        state_cycle: 'FINISHED',
+        timestamp: Timestamp.fromDate(new Date()),
+      });
+      await sendReparationFinishedMail(item, newReparation, user);
+    })
+      .catch((error) => {
+        const code = error instanceof FirebaseError ? error.code : 'unknown';
+
+        console.error(error);
+        toast({
+          title: `Oeps!`,
+          description: `Er liep iets mis bij het updaten van een item. (${code})`,
+          status: 'error',
+          isClosable: true,
+          duration: 10000,
+        });
+      })
+      .finally(() => {
+        setIsLoading(false);
+        onClose();
+      });
+  };
+
+  return (
+    <>
+      <Button
+        w="100%"
+        leftIcon={icon}
+        colorScheme={colorScheme}
+        variant="solid"
+        size="sm"
+        onClick={onOpen}
+        isLoading={isLoading}
+      >
+        {text}
+      </Button>
+
+      <Modal isOpen={isOpen} onClose={onClose} size="lg">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Reparatie voltooien</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <FormControl mt={4}>
+              <FormLabel>Reparatiestatus</FormLabel>
+              <HStack wrap="wrap">
+                {radios.map((radio) => {
+                  return (
+                    <RadioReparationTagComponent
+                      key={radio.key}
+                      text={radio.text}
+                      colorScheme={radio.colorScheme}
+                      icon={radio.icon}
+                      {...getRadioProps({ value: radio.key })}
+                    />
+                  );
+                })}
+              </HStack>
+            </FormControl>
+
+            <FormControl mt={4}>
+              <FormLabel>Opmerkingen van technieker</FormLabel>
+              <Textarea
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+              />
+              <FormHelperText>
+                De eigenaar van het toestel kan deze opmerkingen lezen.
+              </FormHelperText>
+            </FormControl>
+
+            <FormControl mt={8}>
+              Opgelet, de eigenaar wordt opgeroepen via mail en op de
+              infoschermen om zich naar de balie te begeven.
+            </FormControl>
+          </ModalBody>
+
+          <ModalFooter>
+            <Button onClick={onClose}>Annuleren</Button>
+            <Button
+              isLoading={isLoading}
+              onClick={updateReparation}
+              colorScheme="green"
+              ml={3}
+            >
+              Reparatie voltooien
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </>
+  );
+}
+
+function SetCollectedActionButtonComponent({
   reparation,
   colorScheme,
   icon,
@@ -271,31 +533,14 @@ function SetDepositedActionButtonComponent({
   const updateReparation = async () => {
     setIsLoading(true);
     await runTransaction(db, async (transaction) => {
-      const reservedTokens: Set<string> = new Set();
-
-      const collectionReference = typedDb.reparations;
-      const tokensQuery = query(
-        collectionReference,
-        where('state_token', '==', 'RESERVED')
-      );
-      const tokensQuerySnapshot = await getDocs(tokensQuery);
-      tokensQuerySnapshot.forEach((doc) => {
-        reservedTokens.add(doc.data().token);
-      });
-
-      const generatedtoken = generateRandomToken(reservedTokens);
-
       const documentReference = typedDb.reparation(reparation.id);
       await transaction.update(documentReference, {
-        token: generatedtoken,
-        state_cycle: 'DEPOSITED',
-        state_token: 'RESERVED',
+        state_cycle: 'COLLECTED',
         events: arrayUnion({
-          state_cycle: 'DEPOSITED',
+          state_cycle: 'COLLECTED',
           timestamp: new Date(),
         }),
       });
-      // TODO send mail with track link
     })
       .catch((error) => {
         const code = error instanceof FirebaseError ? error.code : 'unknown';
@@ -379,210 +624,13 @@ function SetReleasedActionButtonComponent({
   );
 }
 
-function SetCollectedActionButtonComponent({
-  reparation,
-  colorScheme,
-  icon,
-  text,
-}: {
-  reparation: ExtendedReparation;
-  colorScheme: string;
-  icon: JSX.Element;
-  text: string;
-}) {
-  const toast = useToast();
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-
-  const updateReparation = async () => {
-    setIsLoading(true);
-    await runTransaction(db, async (transaction) => {
-      const documentReference = typedDb.reparation(reparation.id);
-      await transaction.update(documentReference, {
-        state_cycle: 'COLLECTED',
-        events: arrayUnion({
-          state_cycle: 'COLLECTED',
-          timestamp: new Date(),
-        }),
-      });
-    })
-      .catch((error) => {
-        const code = error instanceof FirebaseError ? error.code : 'unknown';
-
-        console.error(error);
-        toast({
-          title: `Oeps!`,
-          description: `Er liep iets mis bij het updaten van een item. (${code})`,
-          status: 'error',
-          isClosable: true,
-          duration: 10000,
-        });
-      })
-      .finally(() => setIsLoading(false));
-  };
-
-  return (
-    <Button
-      w="100%"
-      leftIcon={icon}
-      colorScheme={colorScheme}
-      variant="solid"
-      size="sm"
-      onClick={updateReparation}
-      isLoading={isLoading}
-    >
-      {text}
-    </Button>
-  );
-}
-
-function SetFinishedActionButtonComponent({
-  reparation,
-  colorScheme,
-  icon,
-  text,
-}: {
-  reparation: ExtendedReparation;
-  colorScheme: string;
-  icon: JSX.Element;
-  text: string;
-}) {
-  const radios = [
-    {
-      key: 'SUCCESS',
-      text: 'Reparatie gelukt',
-      colorScheme: 'green',
-      icon: <CheckIcon />,
-    },
-    {
-      key: 'PARTIAL',
-      text: 'Reparatie gedeeltelijk gelukt',
-      colorScheme: 'yellow',
-      icon: <MinusIcon />,
-    },
-    {
-      key: 'FAIL',
-      text: 'Reparatie niet gelukt',
-      colorScheme: 'red',
-      icon: <CloseIcon />,
-    },
-    {
-      key: 'UNKNOWN',
-      text: 'Status onbekend',
-      colorScheme: 'gray',
-      icon: <QuestionIcon />,
-    },
-  ];
-
-  const toast = useToast();
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const { value, getRadioProps } = useRadioGroup();
-  const [remarks, setRemarks] = useState<string>('');
-
-  const updateReparation = async () => {
-    setIsLoading(true);
-    await runTransaction(db, async (transaction) => {
-      const documentReference = typedDb.reparation(reparation.id);
-      await transaction.update(documentReference, {
-        state_cycle: 'FINISHED',
-        state_reparation: value,
-        remarks,
-        events: arrayUnion({
-          state_cycle: 'FINISHED',
-          timestamp: new Date(),
-        }),
-      });
-      // TODO send email to user
-    })
-      .catch((error) => {
-        const code = error instanceof FirebaseError ? error.code : 'unknown';
-
-        console.error(error);
-        toast({
-          title: `Oeps!`,
-          description: `Er liep iets mis bij het updaten van een item. (${code})`,
-          status: 'error',
-          isClosable: true,
-          duration: 10000,
-        });
-      })
-      .finally(() => setIsLoading(false));
-    onClose();
-  };
-
-  return (
-    <>
-      <Button
-        w="100%"
-        leftIcon={icon}
-        colorScheme={colorScheme}
-        variant="solid"
-        size="sm"
-        onClick={onOpen}
-        isLoading={isLoading}
-      >
-        {text}
-      </Button>
-
-      <Modal isOpen={isOpen} onClose={onClose} size="lg">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Reparatie voltooien</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody pb={6}>
-            <FormControl mt={4}>
-              <FormLabel>Reparatiestatus</FormLabel>
-              <HStack wrap="wrap">
-                {radios.map((radio) => {
-                  return (
-                    <RadioReparationTagComponent
-                      key={radio.key}
-                      text={radio.text}
-                      colorScheme={radio.colorScheme}
-                      icon={radio.icon}
-                      {...getRadioProps({ value: radio.key })}
-                    />
-                  );
-                })}
-              </HStack>
-            </FormControl>
-
-            <FormControl mt={4}>
-              <FormLabel>Opmerkingen van technieker</FormLabel>
-              <Textarea
-                value={remarks}
-                onChange={(e) => setRemarks(e.target.value)}
-              />
-              <FormHelperText>
-                De eigenaar van het toestel kan deze opmerkingen lezen.
-              </FormHelperText>
-            </FormControl>
-
-            <FormControl mt={8}>
-              Opgelet, de eigenaar wordt opgeroepen via mail en op de
-              infoschermen om zich naar de balie te begeven.
-            </FormControl>
-          </ModalBody>
-
-          <ModalFooter>
-            <Button onClick={onClose}>Annuleren</Button>
-            <Button onClick={updateReparation} colorScheme="green" ml={3}>
-              Reparatie voltooien
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-    </>
-  );
-}
-
 export {
   DeleteButtonComponent,
   EditButtonComponent,
-  SetCollectedActionButtonComponent,
   SetDepositedActionButtonComponent,
-  SetFinishedActionButtonComponent,
-  SetPendingActionButtonComponent,
   SetQueuedActionButtonComponent,
+  SetPendingActionButtonComponent,
+  SetFinishedActionButtonComponent,
+  SetCollectedActionButtonComponent,
   SetReleasedActionButtonComponent,
 };

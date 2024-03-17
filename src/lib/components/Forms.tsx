@@ -26,8 +26,8 @@ import type { FieldProps, FormikHelpers, FormikProps } from 'formik';
 import { Field, Form, Formik } from 'formik';
 import { useRouter } from 'next/navigation';
 
-import { db } from '../utils/firebase';
 import { typedDb } from '../utils/db';
+import { db } from '../utils/firebase';
 import {
   validateFirstName,
   validateLastName,

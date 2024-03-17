@@ -32,7 +32,7 @@ import {
 } from '~/lib/components/Buttons';
 import DebouncedInputComponent from '~/lib/components/DebouncedInput';
 import { ExpandableReparationTagComponent } from '~/lib/components/ReparationTag';
-import type { ExtendedItem, Item } from '~/lib/models/item';
+import type { ExtendedItem } from '~/lib/models/item';
 import type { ExtendedReparation } from '~/lib/models/reparation';
 import type { ExtendedUser } from '~/lib/models/user';
 import { typedDb } from '~/lib/utils/db';
@@ -40,7 +40,7 @@ import { typedDb } from '~/lib/utils/db';
 import { DataTable } from './DataTable';
 
 interface Document {
-  item: Item;
+  item: ExtendedItem;
   reparation: ExtendedReparation;
   user: ExtendedUser;
 }
@@ -218,14 +218,16 @@ const columns = [
   columnHelper.display({
     id: 'actions',
     cell: (props) => {
-      const { reparation } = props.row.original;
+      const { item, reparation, user }: Document = props.row.original;
 
       switch (reparation.state_cycle) {
         case 'REGISTERED':
           return (
             <HStack>
               <SetDepositedActionButtonComponent
+                item={item}
                 reparation={reparation}
+                user={user}
                 icon={<DownloadIcon />}
                 colorScheme="gray"
                 text="In ontvangst nemen"
@@ -261,7 +263,9 @@ const columns = [
           return (
             <HStack>
               <SetFinishedActionButtonComponent
+                item={item}
                 reparation={reparation}
+                user={user}
                 icon={<BellIcon />}
                 colorScheme="green"
                 text="Eigenaar oproepen"
@@ -324,7 +328,6 @@ const columns = [
   }),
 ];
 
-// TODO deduplicate firebase requests and enable caching
 const Page = () => {
   const toast = useToast();
   const [documents, setDocuments] = useState<Document[]>([]);

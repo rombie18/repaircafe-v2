@@ -7,10 +7,11 @@ import {
   doc,
 } from 'firebase/firestore';
 
-import { db } from './firebase';
 import type { Item } from '../models/item';
 import type { Reparation } from '../models/reparation';
 import type { User } from '../models/user';
+
+import { db } from './firebase';
 
 const converter = <T>(): FirestoreDataConverter<T> => ({
   toFirestore: (data: WithFieldValue<T>): DocumentData => data as DocumentData,
