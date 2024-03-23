@@ -1,5 +1,3 @@
-'use client';
-
 import { Flex, Heading, Text, VStack } from '@chakra-ui/react';
 
 import { RegistrationFormComponent } from '~/lib/components/Forms';

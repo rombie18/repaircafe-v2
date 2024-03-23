@@ -1,5 +1,3 @@
-'use client';
-
 import { CheckIcon, SettingsIcon } from '@chakra-ui/icons';
 import { Box, useToast } from '@chakra-ui/react';
 import { FirebaseError } from 'firebase/app';

@@ -183,10 +183,10 @@ function SetDepositedActionButtonComponent({
         combinedReparation.id
       );
       await transaction.update(documentReference, {
-        token: generatedtoken,
-        state_cycle: 'DEPOSITED',
-        state_token: 'RESERVED',
-        events: arrayUnion({
+        reparation_token: generatedtoken,
+        reparation_state_cycle: 'DEPOSITED',
+        reparation_state_token: 'RESERVED',
+        reparation_events: arrayUnion({
           state_cycle: 'DEPOSITED',
           timestamp: new Date(),
         }),
@@ -195,9 +195,9 @@ function SetDepositedActionButtonComponent({
       const newCombinedReparation: ExtendedCombinedReparation = {
         ...combinedReparation,
         ...{
-          token: generatedtoken,
-          state_cycle: 'DEPOSITED',
-          state_token: 'RESERVED',
+          reparation_token: generatedtoken,
+          reparation_state_cycle: 'DEPOSITED',
+          reparation_state_token: 'RESERVED',
         },
       };
       newCombinedReparation.reparation_events.push({
@@ -257,8 +257,8 @@ function SetQueuedActionButtonComponent({
         combinedReparation.id
       );
       await transaction.update(documentReference, {
-        state_cycle: 'QUEUED',
-        events: arrayUnion({
+        reparation_state_cycle: 'QUEUED',
+        reparation_events: arrayUnion({
           state_cycle: 'QUEUED',
           timestamp: new Date(),
         }),
@@ -314,8 +314,8 @@ function SetPendingActionButtonComponent({
         combinedReparation.id
       );
       await transaction.update(documentReference, {
-        state_cycle: 'PENDING',
-        events: arrayUnion({
+        reparation_state_cycle: 'PENDING',
+        reparation_events: arrayUnion({
           state_cycle: 'PENDING',
           timestamp: new Date(),
         }),
@@ -400,10 +400,10 @@ function SetFinishedActionButtonComponent({
     const documentReference = typedDb.combinedReparation(combinedReparation.id);
     await runTransaction(db, async (transaction) => {
       await transaction.update(documentReference, {
-        state_cycle: 'FINISHED',
-        state_reparation: value,
-        remarks,
-        events: arrayUnion({
+        reparation_state_cycle: 'FINISHED',
+        reparation_state_reparation: value,
+        reparation_remarks: remarks,
+        reparation_events: arrayUnion({
           state_cycle: 'FINISHED',
           timestamp: new Date(),
         }),
@@ -412,9 +412,9 @@ function SetFinishedActionButtonComponent({
       const newCombinedReparation: ExtendedCombinedReparation = {
         ...combinedReparation,
         ...{
-          state_cycle: 'FINISHED',
-          state_reparation: value.toString(),
-          remarks,
+          reparation_state_cycle: 'FINISHED',
+          reparation_state_reparation: value.toString(),
+          reparation_remarks: remarks,
         },
       };
       newCombinedReparation.reparation_events.push({
@@ -533,8 +533,8 @@ function SetCollectedActionButtonComponent({
         combinedReparation.id
       );
       await transaction.update(documentReference, {
-        state_cycle: 'COLLECTED',
-        events: arrayUnion({
+        reparation_state_cycle: 'COLLECTED',
+        reparation_events: arrayUnion({
           state_cycle: 'COLLECTED',
           timestamp: new Date(),
         }),
@@ -591,7 +591,7 @@ function SetReleasedActionButtonComponent({
         combinedReparation.id
       );
       await transaction.update(documentReference, {
-        state_token: 'RELEASED',
+        reparation_state_token: 'RELEASED',
       });
     })
       .catch((error) => {

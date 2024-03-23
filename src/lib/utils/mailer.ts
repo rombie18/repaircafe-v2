@@ -184,7 +184,7 @@ async function sendMail(recipient: string, subject: string, body: string) {
   });
 
   if (!response.ok) {
-    throw new FirebaseError('MAIL_FAILED', 'Unable to send email.');
+    throw new FirebaseError('mail-failed', 'Unable to send email.');
   }
 
   const data = await response.json();
