@@ -53,13 +53,15 @@ function ReparationTagComponent({
   text,
   colorScheme,
   icon,
+  size = 'lg',
 }: {
   text: string;
   colorScheme: string;
   icon: JSX.Element;
+  size?: string;
 }) {
   return (
-    <Tag size="lg" colorScheme={colorScheme} borderRadius="full">
+    <Tag size={size} colorScheme={colorScheme} borderRadius="full">
       {icon}
       <TagLabel ml={2}>{text}</TagLabel>
     </Tag>
@@ -68,8 +70,10 @@ function ReparationTagComponent({
 
 function AutoReparationTagComponent({
   reparation,
+  size = 'lg',
 }: {
   reparation: CombinedReparation | ExtendedCombinedReparation;
+  size?: string;
 }) {
   switch (reparation.reparation_state_reparation) {
     case 'SUCCESS':
@@ -78,6 +82,7 @@ function AutoReparationTagComponent({
           text="Reparatie gelukt"
           colorScheme="green"
           icon={<CheckIcon />}
+          size={size}
         />
       );
     case 'PARTIAL':
@@ -86,6 +91,7 @@ function AutoReparationTagComponent({
           text="Reparatie gedeeltelijk gelukt"
           colorScheme="yellow"
           icon={<MinusIcon />}
+          size={size}
         />
       );
     case 'FAIL':
@@ -94,6 +100,7 @@ function AutoReparationTagComponent({
           text="Reparatie niet gelukt"
           colorScheme="red"
           icon={<CloseIcon />}
+          size={size}
         />
       );
     case 'UNKNOWN':
@@ -103,6 +110,7 @@ function AutoReparationTagComponent({
           text="Status onbekend"
           colorScheme="gray"
           icon={<QuestionIcon />}
+          size={size}
         />
       );
   }

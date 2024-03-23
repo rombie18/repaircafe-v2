@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { TriangleDownIcon, TriangleUpIcon } from '@chakra-ui/icons';
-import { Table, Tbody, Td, Th, Thead, Tr, chakra } from '@chakra-ui/react';
+import { Table, Tbody, Td, Th, Thead, Tr } from '@chakra-ui/react';
 import { rankItem } from '@tanstack/match-sorter-utils';
 import type { ColumnDef, FilterFn } from '@tanstack/react-table';
 import {
@@ -78,24 +78,26 @@ export function DataTable<Data extends object>({
                 <Th
                   key={header.id}
                   onClick={header.column.getToggleSortingHandler()}
+                  style={{ textWrap: 'nowrap' }}
                 >
                   {flexRender(
                     header.column.columnDef.header,
                     header.getContext()
                   )}
 
-                  <chakra.span pl="2">
-                    {!header.column.getIsSorted()
-                      ? null
-                      : header.column.getIsSorted() === 'desc' && (
-                          <TriangleDownIcon aria-label="sorted descending" />
-                        )}
-                    {!header.column.getIsSorted()
-                      ? null
-                      : header.column.getIsSorted() === 'asc' && (
-                          <TriangleUpIcon aria-label="sorted ascending" />
-                        )}
-                  </chakra.span>
+                  {!header.column.getIsSorted()
+                    ? null
+                    : header.column.getIsSorted() === 'desc' && (
+                        <TriangleDownIcon
+                          ml={2}
+                          aria-label="sorted descending"
+                        />
+                      )}
+                  {!header.column.getIsSorted()
+                    ? null
+                    : header.column.getIsSorted() === 'asc' && (
+                        <TriangleUpIcon ml={2} aria-label="sorted ascending" />
+                      )}
                 </Th>
               );
             })}

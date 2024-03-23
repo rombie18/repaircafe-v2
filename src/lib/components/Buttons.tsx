@@ -2,24 +2,34 @@ import {
   CheckIcon,
   CloseIcon,
   DeleteIcon,
-  EditIcon,
+  InfoIcon,
   MinusIcon,
   QuestionIcon,
   WarningTwoIcon,
 } from '@chakra-ui/icons';
 import {
+  RadioGroup,
+  Stack,
+  Radio,
+  Accordion,
+  AccordionButton,
+  AccordionIcon,
+  AccordionItem,
+  AccordionPanel,
   AlertDialog,
   AlertDialogBody,
   AlertDialogContent,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogOverlay,
+  Box,
   Button,
   FormControl,
   FormHelperText,
   FormLabel,
   HStack,
   IconButton,
+  Input,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -42,7 +52,6 @@ import {
   runTransaction,
   where,
 } from 'firebase/firestore';
-import NextLink from 'next/link';
 import { useRef, useState } from 'react';
 
 import { typedDb } from '../utils/db';
@@ -54,21 +63,166 @@ import {
 } from '../utils/mailer';
 import type { ExtendedCombinedReparation } from '../utils/models';
 
-import { RadioReparationTagComponent } from './ReparationTag';
+import {
+  AutoReparationTagComponent,
+  RadioReparationTagComponent,
+} from './ReparationTag';
 
-function EditButtonComponent() {
+function InfoButtonComponent({
+  combinedReparation,
+}: {
+  combinedReparation: ExtendedCombinedReparation;
+}) {
+  const { isOpen, onOpen, onClose } = useDisclosure();
   return (
-    <NextLink href="/admin/reparation" passHref>
+    <>
       <IconButton
-        as="a"
+        onClick={onOpen}
         isRound
         variant="outline"
-        colorScheme="yellow"
+        colorScheme="blue"
         size="sm"
-        aria-label="Reparatie wijzigen"
-        icon={<EditIcon />}
+        aria-label="Toon reparatiegegevens"
+        icon={<InfoIcon />}
       />
-    </NextLink>
+
+      <Modal isOpen={isOpen} onClose={onClose} size="xl">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Reparatiegegevens</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <Accordion allowToggle>
+              <AccordionItem>
+                <h2>
+                  <AccordionButton _expanded={{ bg: '#414b5d' }}>
+                    <Box as="b" flex="1" textAlign="left">
+                      Gegevens eigenaar
+                    </Box>
+                    <AccordionIcon />
+                  </AccordionButton>
+                </h2>
+                <AccordionPanel pb={4}>
+                  <HStack>
+                    <FormControl mt={2}>
+                      <FormLabel fontSize="0.90rem">Volledige naam</FormLabel>
+                      <Input
+                        size="sm"
+                        readOnly
+                        value={combinedReparation.user_full_name}
+                      />
+                    </FormControl>
+                    <FormControl mt={2}>
+                      <FormLabel fontSize="0.90rem">Telefoonnummer</FormLabel>
+                      <Input
+                        size="sm"
+                        readOnly
+                        value={combinedReparation.user_phone}
+                      />
+                    </FormControl>
+                  </HStack>
+                  <FormControl mt={2}>
+                    <FormLabel fontSize="0.90rem">E-mailadres</FormLabel>
+                    <Input
+                      size="sm"
+                      readOnly
+                      value={combinedReparation.user_mail}
+                    />
+                  </FormControl>
+                </AccordionPanel>
+              </AccordionItem>
+              <AccordionItem>
+                <h2>
+                  <AccordionButton _expanded={{ bg: '#414b5d' }}>
+                    <Box as="b" flex="1" textAlign="left">
+                      Gegevens toestel
+                    </Box>
+                    <AccordionIcon />
+                  </AccordionButton>
+                </h2>
+                <AccordionPanel pb={4}>
+                  <FormControl mt={2}>
+                    <FormLabel fontSize="0.90rem">
+                      Omschrijving toestel
+                    </FormLabel>
+                    <Input
+                      size="sm"
+                      readOnly
+                      value={combinedReparation.item_name}
+                    />
+                  </FormControl>
+                  <FormControl mt={2}>
+                    <FormLabel fontSize="0.90rem">
+                      Omschrijving probleem
+                    </FormLabel>
+                    <Textarea
+                      size="sm"
+                      readOnly
+                      value={combinedReparation.item_description}
+                    />
+                  </FormControl>
+                  <FormControl mt={2}>
+                    <FormLabel fontSize="0.90rem">Toestand toestel</FormLabel>
+                    <RadioGroup size="sm" value={combinedReparation.item_state}>
+                      <Stack direction="row">
+                        <Radio value="BROKEN">Defect</Radio>
+                        <Radio value="FAULTY">Niet goed werkend</Radio>
+                        <Radio value="OTHER">Anders</Radio>
+                      </Stack>
+                    </RadioGroup>
+                  </FormControl>
+                </AccordionPanel>
+              </AccordionItem>
+              <AccordionItem>
+                <h2>
+                  <AccordionButton _expanded={{ bg: '#414b5d' }}>
+                    <Box as="b" flex="1" textAlign="left">
+                      Gegevens reparatie
+                    </Box>
+                    <AccordionIcon />
+                  </AccordionButton>
+                </h2>
+                <AccordionPanel pb={4}>
+                  <FormControl mt={2}>
+                    <FormLabel fontSize="0.90rem">
+                      Status levenscyclus
+                    </FormLabel>
+                    <Input
+                      size="sm"
+                      readOnly
+                      value={combinedReparation.reparation_state_cycle}
+                    />
+                  </FormControl>
+                  <FormControl mt={2}>
+                    <FormLabel fontSize="0.90rem">Reparatiestatus</FormLabel>
+                    <AutoReparationTagComponent
+                      reparation={combinedReparation}
+                      size="md"
+                    />
+                  </FormControl>
+                  <FormControl mt={2}>
+                    <FormLabel fontSize="0.90rem">
+                      Opmerkingen technieker
+                    </FormLabel>
+                    <Textarea
+                      size="sm"
+                      readOnly
+                      value={combinedReparation.reparation_remarks}
+                    />
+                  </FormControl>
+                </AccordionPanel>
+              </AccordionItem>
+            </Accordion>
+          </ModalBody>
+
+          <ModalFooter>
+            <Button colorScheme="blue" mr={3} onClick={onClose}>
+              Sluiten
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </>
   );
 }
 
@@ -626,7 +780,7 @@ function SetReleasedActionButtonComponent({
 
 export {
   DeleteButtonComponent,
-  EditButtonComponent,
+  InfoButtonComponent,
   SetDepositedActionButtonComponent,
   SetQueuedActionButtonComponent,
   SetPendingActionButtonComponent,

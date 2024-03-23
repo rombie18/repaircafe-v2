@@ -27,6 +27,7 @@ import {
   SetFinishedActionButtonComponent,
   SetCollectedActionButtonComponent,
   SetReleasedActionButtonComponent,
+  InfoButtonComponent,
 } from '~/lib/components/Buttons';
 import DebouncedInputComponent from '~/lib/components/DebouncedInput';
 import { ExpandableReparationTagComponent } from '~/lib/components/ReparationTag';
@@ -220,7 +221,7 @@ const columns = [
                 colorScheme="gray"
                 text="In ontvangst nemen"
               />
-              {/* TODO add info button which shows modal with more info about item on click */}
+              <InfoButtonComponent combinedReparation={combinedReparation} />
               <DeleteButtonComponent combinedReparation={combinedReparation} />
             </HStack>
           );
@@ -233,6 +234,7 @@ const columns = [
                 colorScheme="red"
                 text="In wachtrij zetten"
               />
+              <InfoButtonComponent combinedReparation={combinedReparation} />
               <DeleteButtonComponent combinedReparation={combinedReparation} />
             </HStack>
           );
@@ -245,6 +247,7 @@ const columns = [
                 colorScheme="yellow"
                 text="Reparatie starten"
               />
+              <InfoButtonComponent combinedReparation={combinedReparation} />
               <DeleteButtonComponent combinedReparation={combinedReparation} />
             </HStack>
           );
@@ -257,6 +260,7 @@ const columns = [
                 colorScheme="green"
                 text="Eigenaar oproepen"
               />
+              <InfoButtonComponent combinedReparation={combinedReparation} />
               <DeleteButtonComponent combinedReparation={combinedReparation} />
             </HStack>
           );
@@ -269,6 +273,7 @@ const columns = [
                 colorScheme="green"
                 text="Als opgehaald markeren"
               />
+              <InfoButtonComponent combinedReparation={combinedReparation} />
               <DeleteButtonComponent combinedReparation={combinedReparation} />
             </HStack>
           );
@@ -282,6 +287,7 @@ const columns = [
                   colorScheme="gray"
                   text="Volgnummer vrijgeven"
                 />
+                <InfoButtonComponent combinedReparation={combinedReparation} />
                 <DeleteButtonComponent
                   combinedReparation={combinedReparation}
                 />
@@ -299,7 +305,7 @@ const columns = [
               >
                 Afgehandeld!
               </Button>
-
+              <InfoButtonComponent combinedReparation={combinedReparation} />
               <DeleteButtonComponent combinedReparation={combinedReparation} />
             </HStack>
           );
@@ -308,6 +314,7 @@ const columns = [
         default:
           return (
             <HStack>
+              <InfoButtonComponent combinedReparation={combinedReparation} />
               <DeleteButtonComponent combinedReparation={combinedReparation} />
             </HStack>
           );
@@ -363,17 +370,21 @@ const Page = () => {
   const [sorting, setSorting] = useState<SortingState>(initialSortingState);
 
   return (
-    <Box maxWidth="100%" overflowX="auto">
-      <VStack spacing={6}>
-        <HStack w="100%">
+    <VStack spacing={6}>
+      <HStack w="100%">
+        <Box minWidth="65%" flex={1}>
           <DebouncedInputComponent
             placeholder="Typ om te zoeken..."
             value={globalFilter ?? ''}
             onChange={(value) => setGlobalFilter(String(value))}
           />
+        </Box>
+        <Box overflowX="auto" style={{ textWrap: 'nowrap' }}>
           <Button onClick={() => push(`/register`)}>Item registreren</Button>
           <Button onClick={() => push(`/kiosk`)}>Kiosk openen</Button>
-        </HStack>
+        </Box>
+      </HStack>
+      <Box width="100%" overflowX="auto">
         <DataTable
           columns={columns}
           data={documents}
@@ -382,8 +393,8 @@ const Page = () => {
           sorting={sorting}
           setSorting={setSorting}
         />
-      </VStack>
-    </Box>
+      </Box>
+    </VStack>
   );
 };
 
