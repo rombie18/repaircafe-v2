@@ -36,6 +36,7 @@ import { FirebaseError } from 'firebase/app';
 import {
   Timestamp,
   arrayUnion,
+  deleteDoc,
   getDocs,
   query,
   runTransaction,
@@ -44,9 +45,6 @@ import {
 import NextLink from 'next/link';
 import { useRef, useState } from 'react';
 
-import type { ExtendedItem } from '../models/item';
-import type { ExtendedReparation } from '../models/reparation';
-import type { ExtendedUser } from '../models/user';
 import { typedDb } from '../utils/db';
 import { db } from '../utils/firebase';
 import { generateRandomToken } from '../utils/functions';
@@ -54,6 +52,7 @@ import {
   sendReparationDepositedMail,
   sendReparationFinishedMail,
 } from '../utils/mailer';
+import type { ExtendedCombinedReparation } from '../utils/models';
 
 import { RadioReparationTagComponent } from './ReparationTag';
 
@@ -74,30 +73,29 @@ function EditButtonComponent() {
 }
 
 function DeleteButtonComponent({
-  reparation,
+  combinedReparation,
 }: {
-  reparation: ExtendedReparation;
+  combinedReparation: ExtendedCombinedReparation;
 }) {
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const cancelRef = useRef(null);
 
   const deleteReparation = async () => {
-    await runTransaction(db, async (transaction) => {
-      await transaction.delete(typedDb.item(reparation.item_id));
-      await transaction.delete(typedDb.reparation(reparation.id));
-    }).catch((error) => {
-      const code = error instanceof FirebaseError ? error.code : 'unknown';
+    await deleteDoc(typedDb.combinedReparation(combinedReparation.id)).catch(
+      (error) => {
+        const code = error instanceof FirebaseError ? error.code : 'unknown';
 
-      console.error(error);
-      toast({
-        title: `Oeps!`,
-        description: `Er liep iets mis bij het updaten van een item. (${code})`,
-        status: 'error',
-        isClosable: true,
-        duration: 10000,
-      });
-    });
+        console.error(error);
+        toast({
+          title: `Oeps!`,
+          description: `Er liep iets mis bij het updaten van een item. (${code})`,
+          status: 'error',
+          isClosable: true,
+          duration: 10000,
+        });
+      }
+    );
     onClose();
   };
 
@@ -151,16 +149,12 @@ function DeleteButtonComponent({
 }
 
 function SetDepositedActionButtonComponent({
-  item,
-  reparation,
-  user,
+  combinedReparation,
   colorScheme,
   icon,
   text,
 }: {
-  item: ExtendedItem;
-  reparation: ExtendedReparation;
-  user: ExtendedUser;
+  combinedReparation: ExtendedCombinedReparation;
   colorScheme: string;
   icon: JSX.Element;
   text: string;
@@ -173,19 +167,21 @@ function SetDepositedActionButtonComponent({
     await runTransaction(db, async (transaction) => {
       const reservedTokens: Set<string> = new Set();
 
-      const collectionReference = typedDb.reparations;
+      const collectionReference = typedDb.combinedReparations;
       const tokensQuery = query(
         collectionReference,
-        where('state_token', '==', 'RESERVED')
+        where('reparation_state_token', '==', 'RESERVED')
       );
       const tokensQuerySnapshot = await getDocs(tokensQuery);
       tokensQuerySnapshot.forEach((doc) => {
-        reservedTokens.add(doc.data().token);
+        reservedTokens.add(doc.data().reparation_token);
       });
 
       const generatedtoken = generateRandomToken(reservedTokens);
 
-      const documentReference = typedDb.reparation(reparation.id);
+      const documentReference = typedDb.combinedReparation(
+        combinedReparation.id
+      );
       await transaction.update(documentReference, {
         token: generatedtoken,
         state_cycle: 'DEPOSITED',
@@ -196,19 +192,19 @@ function SetDepositedActionButtonComponent({
         }),
       });
 
-      const newReparation: ExtendedReparation = {
-        ...reparation,
+      const newCombinedReparation: ExtendedCombinedReparation = {
+        ...combinedReparation,
         ...{
           token: generatedtoken,
           state_cycle: 'DEPOSITED',
           state_token: 'RESERVED',
         },
       };
-      newReparation.events.push({
+      newCombinedReparation.reparation_events.push({
         state_cycle: 'DEPOSITED',
         timestamp: Timestamp.fromDate(new Date()),
       });
-      await sendReparationDepositedMail(item, newReparation, user);
+      await sendReparationDepositedMail(newCombinedReparation);
     })
       .catch((error) => {
         const code = error instanceof FirebaseError ? error.code : 'unknown';
@@ -241,12 +237,12 @@ function SetDepositedActionButtonComponent({
 }
 
 function SetQueuedActionButtonComponent({
-  reparation,
+  combinedReparation,
   colorScheme,
   icon,
   text,
 }: {
-  reparation: ExtendedReparation;
+  combinedReparation: ExtendedCombinedReparation;
   colorScheme: string;
   icon: JSX.Element;
   text: string;
@@ -257,7 +253,9 @@ function SetQueuedActionButtonComponent({
   const updateReparation = async () => {
     setIsLoading(true);
     await runTransaction(db, async (transaction) => {
-      const documentReference = typedDb.reparation(reparation.id);
+      const documentReference = typedDb.combinedReparation(
+        combinedReparation.id
+      );
       await transaction.update(documentReference, {
         state_cycle: 'QUEUED',
         events: arrayUnion({
@@ -297,12 +295,12 @@ function SetQueuedActionButtonComponent({
 }
 
 function SetPendingActionButtonComponent({
-  reparation,
+  combinedReparation,
   colorScheme,
   icon,
   text,
 }: {
-  reparation: ExtendedReparation;
+  combinedReparation: ExtendedCombinedReparation;
   colorScheme: string;
   icon: JSX.Element;
   text: string;
@@ -312,7 +310,9 @@ function SetPendingActionButtonComponent({
   const updateReparation = async () => {
     setIsLoading(true);
     await runTransaction(db, async (transaction) => {
-      const documentReference = typedDb.reparation(reparation.id);
+      const documentReference = typedDb.combinedReparation(
+        combinedReparation.id
+      );
       await transaction.update(documentReference, {
         state_cycle: 'PENDING',
         events: arrayUnion({
@@ -351,16 +351,12 @@ function SetPendingActionButtonComponent({
   );
 }
 function SetFinishedActionButtonComponent({
-  item,
-  reparation,
-  user,
+  combinedReparation,
   colorScheme,
   icon,
   text,
 }: {
-  item: ExtendedItem;
-  reparation: ExtendedReparation;
-  user: ExtendedUser;
+  combinedReparation: ExtendedCombinedReparation;
   colorScheme: string;
   icon: JSX.Element;
   text: string;
@@ -401,7 +397,7 @@ function SetFinishedActionButtonComponent({
   const updateReparation = async () => {
     setIsLoading(true);
 
-    const documentReference = typedDb.reparation(reparation.id);
+    const documentReference = typedDb.combinedReparation(combinedReparation.id);
     await runTransaction(db, async (transaction) => {
       await transaction.update(documentReference, {
         state_cycle: 'FINISHED',
@@ -413,19 +409,19 @@ function SetFinishedActionButtonComponent({
         }),
       });
 
-      const newReparation: ExtendedReparation = {
-        ...reparation,
+      const newCombinedReparation: ExtendedCombinedReparation = {
+        ...combinedReparation,
         ...{
           state_cycle: 'FINISHED',
           state_reparation: value.toString(),
           remarks,
         },
       };
-      newReparation.events.push({
+      newCombinedReparation.reparation_events.push({
         state_cycle: 'FINISHED',
         timestamp: Timestamp.fromDate(new Date()),
       });
-      await sendReparationFinishedMail(item, newReparation, user);
+      await sendReparationFinishedMail(newCombinedReparation);
     })
       .catch((error) => {
         const code = error instanceof FirebaseError ? error.code : 'unknown';
@@ -517,12 +513,12 @@ function SetFinishedActionButtonComponent({
 }
 
 function SetCollectedActionButtonComponent({
-  reparation,
+  combinedReparation,
   colorScheme,
   icon,
   text,
 }: {
-  reparation: ExtendedReparation;
+  combinedReparation: ExtendedCombinedReparation;
   colorScheme: string;
   icon: JSX.Element;
   text: string;
@@ -533,7 +529,9 @@ function SetCollectedActionButtonComponent({
   const updateReparation = async () => {
     setIsLoading(true);
     await runTransaction(db, async (transaction) => {
-      const documentReference = typedDb.reparation(reparation.id);
+      const documentReference = typedDb.combinedReparation(
+        combinedReparation.id
+      );
       await transaction.update(documentReference, {
         state_cycle: 'COLLECTED',
         events: arrayUnion({
@@ -573,12 +571,12 @@ function SetCollectedActionButtonComponent({
 }
 
 function SetReleasedActionButtonComponent({
-  reparation,
+  combinedReparation,
   colorScheme,
   icon,
   text,
 }: {
-  reparation: ExtendedReparation;
+  combinedReparation: ExtendedCombinedReparation;
   colorScheme: string;
   icon: JSX.Element;
   text: string;
@@ -589,7 +587,9 @@ function SetReleasedActionButtonComponent({
   const updateReparation = async () => {
     setIsLoading(true);
     await runTransaction(db, async (transaction) => {
-      const documentReference = typedDb.reparation(reparation.id);
+      const documentReference = typedDb.combinedReparation(
+        combinedReparation.id
+      );
       await transaction.update(documentReference, {
         state_token: 'RELEASED',
       });

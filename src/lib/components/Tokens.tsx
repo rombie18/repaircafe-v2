@@ -11,20 +11,23 @@ import {
 import { cloneElement, useEffect, useRef, useState } from 'react';
 import Marquee from 'react-fast-marquee';
 
-import type { ExtendedReparation, Reparation } from '../models/reparation';
+import type {
+  CombinedReparation,
+  ExtendedCombinedReparation,
+} from '../utils/models';
 
 function TokenComponent({
   reparation,
   color,
 }: {
-  reparation: Reparation;
+  reparation: CombinedReparation | ExtendedCombinedReparation;
   color: string;
 }) {
   return (
     <Box bg={color} p={3}>
       <Center>
         <Badge fontSize="2rem" colorScheme="black">
-          {reparation.token}
+          {reparation.reparation_token}
         </Badge>
       </Center>
     </Box>
@@ -37,7 +40,7 @@ function TokenGridComponent({
   color,
   heading,
 }: {
-  reparations: ExtendedReparation[];
+  reparations: ExtendedCombinedReparation[];
   icon: JSX.Element;
   color: string;
   heading: string;
@@ -111,7 +114,7 @@ function TokenMarqueeComponent({
   color,
   heading,
 }: {
-  reparations: ExtendedReparation[];
+  reparations: ExtendedCombinedReparation[];
   color: string;
   heading: string;
 }) {

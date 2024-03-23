@@ -11,29 +11,32 @@ import {
   TokenGridComponent,
   TokenMarqueeComponent,
 } from '~/lib/components/Tokens';
-import type { ExtendedReparation } from '~/lib/models/reparation';
 import { typedDb } from '~/lib/utils/db';
 import { sortReparationsOnEvent } from '~/lib/utils/functions';
+import type { ExtendedCombinedReparation } from '~/lib/utils/models';
 
 const Page = () => {
   const toast = useToast();
-  const [reparations, setReparations] = useState<ExtendedReparation[]>([]);
+  const [reparations, setReparations] = useState<ExtendedCombinedReparation[]>(
+    []
+  );
 
   useEffect(() => {
     const getData = (
-      setData: Dispatch<SetStateAction<ExtendedReparation[]>>
+      setData: Dispatch<SetStateAction<ExtendedCombinedReparation[]>>
     ) => {
       onSnapshot(
-        typedDb.reparations,
+        typedDb.combinedReparations,
         (snapshot) => {
-          const documents: ExtendedReparation[] = [];
+          const documents: ExtendedCombinedReparation[] = [];
           snapshot.forEach((document) => {
             if (!document.exists()) {
               throw Error();
             }
 
-            const reparation: ExtendedReparation = {
+            const reparation: ExtendedCombinedReparation = {
               id: document.id,
+              user_full_name: `${document.data().user_first_name} ${document.data().user_last_name}`,
               ...document.data(),
             };
             documents.push(reparation);
@@ -63,7 +66,9 @@ const Page = () => {
         <Box flex="1" py="4">
           <TokenGridComponent
             reparations={reparations
-              .filter((reparation) => reparation.state_cycle === 'PENDING')
+              .filter(
+                (reparation) => reparation.reparation_state_cycle === 'PENDING'
+              )
               .sort((a, b) => sortReparationsOnEvent(a, b, 'PENDING'))}
             heading="Reparatie bezig"
             icon={<SettingsIcon />}
@@ -74,7 +79,9 @@ const Page = () => {
         <Box flex="1" py="4">
           <TokenGridComponent
             reparations={reparations
-              .filter((reparation) => reparation.state_cycle === 'FINISHED')
+              .filter(
+                (reparation) => reparation.reparation_state_cycle === 'FINISHED'
+              )
               .sort((a, b) => sortReparationsOnEvent(a, b, 'FINISHED'))}
             heading="Reparatie voltooid"
             icon={<CheckIcon />}
@@ -86,7 +93,9 @@ const Page = () => {
       <Box pt="4" paddingTop="0 auto">
         <TokenMarqueeComponent
           reparations={reparations
-            .filter((reparation) => reparation.state_cycle === 'QUEUED')
+            .filter(
+              (reparation) => reparation.reparation_state_cycle === 'QUEUED'
+            )
             .sort((a, b) => sortReparationsOnEvent(a, b, 'QUEUED'))}
           heading="Wachtrij:"
           color="gray.400"

@@ -1,8 +1,6 @@
 import { FirebaseError } from 'firebase/app';
 
-import type { ExtendedItem } from '../models/item';
-import type { ExtendedReparation } from '../models/reparation';
-import type { ExtendedUser } from '../models/user';
+import type { ExtendedCombinedReparation } from './models';
 
 const MAILER_API_URL = 'https://www.bitit.be/api/repair-cafe/index.php';
 
@@ -183,8 +181,6 @@ async function sendMail(recipient: string, subject: string, body: string) {
       subject,
       body,
     }),
-  }).catch((error) => {
-    throw new FirebaseError(error, 'Unable to send email.');
   });
 
   if (!response.ok) {
@@ -198,25 +194,23 @@ async function sendMail(recipient: string, subject: string, body: string) {
 }
 
 function sendReparationFinishedMail(
-  item: ExtendedItem,
-  reparation: ExtendedReparation,
-  user: ExtendedUser
+  combinedReparation: ExtendedCombinedReparation
 ) {
-  const recipient = user.mail;
+  const recipient = combinedReparation.user_mail;
   const subject = `Reparatie toestel voltooid`;
   const body = generateBody(
-    `De reparatie van uw ${item.name.toLowerCase()} is voltooid. U kan het toestel terug ophalen.`,
-    `Hallo ${user.first_name}`,
-    `De reparatie van uw ${item.name.toLowerCase()} is voltooid. U kan het toestel terug komen afhalen bij onze stand in de Agora van Thomas More campus Geel.`,
-    `https://repair-cafe-v2.web.app/track/reparation?id=${reparation.id}`,
+    `De reparatie van uw ${combinedReparation.item_name.toLowerCase()} is voltooid. U kan het toestel terug ophalen.`,
+    `Hallo ${combinedReparation.user_first_name}`,
+    `De reparatie van uw ${combinedReparation.item_name.toLowerCase()} is voltooid. U kan het toestel terug komen afhalen bij onze stand in de Agora van Thomas More campus Geel.`,
+    `https://repair-cafe-v2.web.app/track/reparation?id=${combinedReparation.id}`,
     'Volg je reparatie',
     `
       <b>Informatie over uw reparatie:</b><br>
-      Volgnummer: ${reparation.token}<br>
-      Toestel: ${item.name}<br>
-      Beschrijving probleem: <br>${item.description}<br>
-      Status reparatie: ${reparation.state_reparation}<br>
-      Opmerkingen technieker: <br>${reparation.remarks}
+      Volgnummer: ${combinedReparation.reparation_token}<br>
+      Toestel: ${combinedReparation.item_name}<br>
+      Beschrijving probleem: <br>${combinedReparation.item_description}<br>
+      Status reparatie: ${combinedReparation.reparation_state_reparation}<br>
+      Opmerkingen technieker: <br>${combinedReparation.reparation_remarks}
     `,
     'Bedankt voor uw deelname en hopelijk tot de volgende editie!<br>Het Repair Café XL team'
   );
@@ -225,26 +219,24 @@ function sendReparationFinishedMail(
 }
 
 function sendReparationDepositedMail(
-  item: ExtendedItem,
-  reparation: ExtendedReparation,
-  user: ExtendedUser
+  combinedReparation: ExtendedCombinedReparation
 ) {
-  const recipient = user.mail;
+  const recipient = combinedReparation.user_mail;
   const subject = `We repareren je toestel`;
   const body = generateBody(
-    `We starten met de reparatie van uw ${item.name.toLowerCase()}. U kan in real-time de reparatie opvolgen.`,
-    `Hallo ${user.first_name}`,
+    `We starten met de reparatie van uw ${combinedReparation.item_name.toLowerCase()}. U kan in real-time de reparatie opvolgen.`,
+    `Hallo ${combinedReparation.user_first_name}`,
     `U heeft zojuist uw toestel afgeleverd aan onze reparatiestand. 
-    Een team van gemotiveerde studenten start binnenkort met het reparareren van uw ${item.name.toLowerCase()}. 
+    Een team van gemotiveerde studenten start binnenkort met het reparareren van uw ${combinedReparation.item_name.toLowerCase()}. 
     U kan de reparatie in real-time op afstand volgen via onderstaande knop. 
     Wanneer de reparatie is voltooid, ontvangt u een nieuwe e-mail zodat u het toestel kan komen afhalen.`,
-    `https://repair-cafe-v2.web.app/track/reparation?id=${reparation.id}`,
+    `https://repair-cafe-v2.web.app/track/reparation?id=${combinedReparation.id}`,
     'Volg je reparatie',
     `
       <b>Informatie over uw reparatie:</b><br>
-      Volgnummer: ${reparation.token}<br>
-      Toestel: ${item.name}<br>
-      Beschrijving probleem: <br>${item.description}
+      Volgnummer: ${combinedReparation.reparation_token}<br>
+      Toestel: ${combinedReparation.item_name}<br>
+      Beschrijving probleem: <br>${combinedReparation.item_description}
     `,
     'Bedankt voor uw deelname!<br>Het Repair Café XL team'
   );

@@ -16,7 +16,10 @@ import {
   useRadio,
 } from '@chakra-ui/react';
 
-import type { ExtendedReparation, Reparation } from '../models/reparation';
+import type {
+  CombinedReparation,
+  ExtendedCombinedReparation,
+} from '../utils/models';
 
 function ExpandableReparationTagComponent({
   colorScheme,
@@ -66,9 +69,9 @@ function ReparationTagComponent({
 function AutoReparationTagComponent({
   reparation,
 }: {
-  reparation: Reparation | ExtendedReparation;
+  reparation: CombinedReparation | ExtendedCombinedReparation;
 }) {
-  switch (reparation.state_reparation) {
+  switch (reparation.reparation_state_reparation) {
     case 'SUCCESS':
       return (
         <ReparationTagComponent

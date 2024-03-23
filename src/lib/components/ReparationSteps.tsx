@@ -14,12 +14,15 @@ import {
 } from '@chakra-ui/react';
 import { useEffect, useMemo } from 'react';
 
-import type { ExtendedReparation, Reparation } from '../models/reparation';
+import type {
+  CombinedReparation,
+  ExtendedCombinedReparation,
+} from '../utils/models';
 
 export default function ReparationStepsComponent({
   reparation,
 }: {
-  reparation: Reparation | ExtendedReparation;
+  reparation: CombinedReparation | ExtendedCombinedReparation;
 }) {
   const steps = useMemo(
     () => [
@@ -68,7 +71,7 @@ export default function ReparationStepsComponent({
 
   useEffect(() => {
     const newIndex = steps.findIndex(
-      (step) => step.state_cycle === reparation.state_cycle
+      (step) => step.state_cycle === reparation.reparation_state_cycle
     );
     setActiveStep(newIndex);
   }, [reparation, steps, setActiveStep]);

@@ -1,6 +1,6 @@
 import { FirebaseError } from 'firebase/app';
 
-import type { ExtendedReparation } from '../models/reparation';
+import type { ExtendedCombinedReparation } from './models';
 
 function generateRandomToken(reservedTokens: Set<string>): string {
   let randomToken;
@@ -27,15 +27,15 @@ function generateRandomToken(reservedTokens: Set<string>): string {
 }
 
 function sortReparationsOnEvent(
-  reparationA: ExtendedReparation,
-  reparationB: ExtendedReparation,
+  reparationA: ExtendedCombinedReparation,
+  reparationB: ExtendedCombinedReparation,
   event_state_cycle: string
 ) {
   return (
-    reparationA.events
+    reparationA.reparation_events
       .filter((event) => event.state_cycle === event_state_cycle)[0]
       .timestamp.toMillis() -
-    reparationB.events
+    reparationB.reparation_events
       .filter((event) => event.state_cycle === event_state_cycle)[0]
       .timestamp.toMillis()
   );

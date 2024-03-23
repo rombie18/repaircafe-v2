@@ -7,11 +7,8 @@ import {
   doc,
 } from 'firebase/firestore';
 
-import type { Item } from '../models/item';
-import type { Reparation } from '../models/reparation';
-import type { User } from '../models/user';
-
 import { db } from './firebase';
+import type { CombinedReparation } from './models';
 
 const converter = <T>(): FirestoreDataConverter<T> => ({
   toFirestore: (data: WithFieldValue<T>): DocumentData => data as DocumentData,
@@ -29,13 +26,9 @@ const typedDocument = <T>(collectionPath: string, documentId?: string) => {
 };
 
 const typedDb = {
-  users: typedCollection<User>('users'),
-  user: (userId?: string) => typedDocument<User>('users', userId),
-  items: typedCollection<Item>('items'),
-  item: (itemId?: string) => typedDocument<Item>('items', itemId),
-  reparations: typedCollection<Reparation>('reparations'),
-  reparation: (reparationId?: string) =>
-    typedDocument<Reparation>('reparations', reparationId),
+  combinedReparations: typedCollection<CombinedReparation>('reparations'),
+  combinedReparation: (combinedReparationId?: string) =>
+    typedDocument<CombinedReparation>('reparations', combinedReparationId),
 };
 
 export { typedDb };

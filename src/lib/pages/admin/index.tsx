@@ -1,49 +1,41 @@
 'use client';
 
 import {
-  BellIcon,
   CheckIcon,
-  CloseIcon,
-  DownloadIcon,
   MinusIcon,
+  CloseIcon,
   QuestionIcon,
-  SettingsIcon,
+  DownloadIcon,
   SpinnerIcon,
+  SettingsIcon,
+  BellIcon,
   UnlockIcon,
 } from '@chakra-ui/icons';
 import { Badge, Box, Button, HStack, VStack, useToast } from '@chakra-ui/react';
 import type { SortingState } from '@tanstack/react-table';
 import { createColumnHelper } from '@tanstack/react-table';
 import { FirebaseError } from 'firebase/app';
-import { getDoc, onSnapshot } from 'firebase/firestore';
+import { onSnapshot } from 'firebase/firestore';
 import { DateTime } from 'luxon';
 import { useRouter } from 'next/navigation';
 import type { Dispatch, SetStateAction } from 'react';
 import { useEffect, useState } from 'react';
 
 import {
-  DeleteButtonComponent,
-  SetCollectedActionButtonComponent,
   SetDepositedActionButtonComponent,
-  SetFinishedActionButtonComponent,
-  SetPendingActionButtonComponent,
+  DeleteButtonComponent,
   SetQueuedActionButtonComponent,
+  SetPendingActionButtonComponent,
+  SetFinishedActionButtonComponent,
+  SetCollectedActionButtonComponent,
   SetReleasedActionButtonComponent,
 } from '~/lib/components/Buttons';
 import DebouncedInputComponent from '~/lib/components/DebouncedInput';
 import { ExpandableReparationTagComponent } from '~/lib/components/ReparationTag';
-import type { ExtendedItem } from '~/lib/models/item';
-import type { ExtendedReparation } from '~/lib/models/reparation';
-import type { ExtendedUser } from '~/lib/models/user';
 import { typedDb } from '~/lib/utils/db';
+import type { ExtendedCombinedReparation } from '~/lib/utils/models';
 
 import { DataTable } from './DataTable';
-
-interface Document {
-  item: ExtendedItem;
-  reparation: ExtendedReparation;
-  user: ExtendedUser;
-}
 
 const initialSortingState = [
   {
@@ -52,10 +44,10 @@ const initialSortingState = [
   },
 ];
 
-const columnHelper = createColumnHelper<Document>();
+const columnHelper = createColumnHelper<ExtendedCombinedReparation>();
 
 const columns = [
-  columnHelper.accessor('reparation.state_reparation', {
+  columnHelper.accessor('reparation_state_reparation', {
     id: 'state_reparation',
     cell: (info) => {
       switch (info.getValue()) {
@@ -96,34 +88,34 @@ const columns = [
     },
     header: '',
   }),
-  columnHelper.accessor('reparation.token', {
+  columnHelper.accessor('reparation_token', {
     id: 'token',
     cell: (info) => {
       return <Badge fontSize="1rem">{info.getValue()}</Badge>;
     },
     header: 'Volgnummer',
   }),
-  columnHelper.accessor('item.name', {
+  columnHelper.accessor('item_name', {
     id: 'name',
     cell: (info) => {
       return info.getValue();
     },
     header: 'Toestel',
   }),
-  columnHelper.accessor('user.name', {
+  columnHelper.accessor('user_full_name', {
     id: 'user',
     cell: (info) => {
       return info.getValue();
     },
     header: 'Eigenaar',
   }),
-  columnHelper.accessor('reparation.events', {
+  columnHelper.accessor('reparation_events', {
     id: 'deposited_timestamp',
     sortingFn: (rowA, rowB) => {
-      const eventA = rowA.original.reparation.events.filter(
+      const eventA = rowA.original.reparation_events.filter(
         (item) => item.state_cycle === 'DEPOSITED'
       )[0];
-      const eventB = rowB.original.reparation.events.filter(
+      const eventB = rowB.original.reparation_events.filter(
         (item) => item.state_cycle === 'DEPOSITED'
       )[0];
 
@@ -131,14 +123,14 @@ const columns = [
         return 1;
       }
       if (
-        rowA.original.reparation.state_token === 'RELEASED' &&
-        rowA.original.reparation.state_cycle === 'COLLECTED'
+        rowA.original.reparation_state_token === 'RELEASED' &&
+        rowA.original.reparation_state_cycle === 'COLLECTED'
       ) {
         return 1;
       }
       if (
-        rowB.original.reparation.state_token === 'RELEASED' &&
-        rowB.original.reparation.state_cycle === 'COLLECTED'
+        rowB.original.reparation_state_token === 'RELEASED' &&
+        rowB.original.reparation_state_cycle === 'COLLECTED'
       ) {
         return 1;
       }
@@ -164,7 +156,7 @@ const columns = [
     },
     header: 'Aangemeld',
   }),
-  columnHelper.accessor('reparation.state_cycle', {
+  columnHelper.accessor('reparation_state_cycle', {
     id: 'state_cycle',
     cell: (info) => {
       switch (info.getValue()) {
@@ -218,84 +210,83 @@ const columns = [
   columnHelper.display({
     id: 'actions',
     cell: (props) => {
-      const { item, reparation, user }: Document = props.row.original;
+      const combinedReparation: ExtendedCombinedReparation = props.row.original;
 
-      switch (reparation.state_cycle) {
+      switch (combinedReparation.reparation_state_cycle) {
         case 'REGISTERED':
           return (
             <HStack>
               <SetDepositedActionButtonComponent
-                item={item}
-                reparation={reparation}
-                user={user}
+                combinedReparation={combinedReparation}
                 icon={<DownloadIcon />}
                 colorScheme="gray"
                 text="In ontvangst nemen"
               />
-              <DeleteButtonComponent reparation={reparation} />
+              {/* TODO add info button which shows modal with more info about item on click */}
+              <DeleteButtonComponent combinedReparation={combinedReparation} />
             </HStack>
           );
         case 'DEPOSITED':
           return (
             <HStack>
               <SetQueuedActionButtonComponent
-                reparation={reparation}
+                combinedReparation={combinedReparation}
                 icon={<SpinnerIcon />}
                 colorScheme="red"
                 text="In wachtrij zetten"
               />
-              <DeleteButtonComponent reparation={reparation} />
+              <DeleteButtonComponent combinedReparation={combinedReparation} />
             </HStack>
           );
         case 'QUEUED':
           return (
             <HStack>
               <SetPendingActionButtonComponent
-                reparation={reparation}
+                combinedReparation={combinedReparation}
                 icon={<SettingsIcon />}
                 colorScheme="yellow"
                 text="Reparatie starten"
               />
-              <DeleteButtonComponent reparation={reparation} />
+              <DeleteButtonComponent combinedReparation={combinedReparation} />
             </HStack>
           );
         case 'PENDING':
           return (
             <HStack>
               <SetFinishedActionButtonComponent
-                item={item}
-                reparation={reparation}
-                user={user}
+                combinedReparation={combinedReparation}
                 icon={<BellIcon />}
                 colorScheme="green"
                 text="Eigenaar oproepen"
               />
-              <DeleteButtonComponent reparation={reparation} />
+              <DeleteButtonComponent combinedReparation={combinedReparation} />
             </HStack>
           );
         case 'FINISHED':
           return (
             <HStack>
               <SetCollectedActionButtonComponent
-                reparation={reparation}
+                combinedReparation={combinedReparation}
                 icon={<CheckIcon />}
                 colorScheme="green"
                 text="Als opgehaald markeren"
               />
-              <DeleteButtonComponent reparation={reparation} />
+              <DeleteButtonComponent combinedReparation={combinedReparation} />
             </HStack>
           );
         case 'COLLECTED':
-          if (reparation.state_token === 'RESERVED') {
+          if (combinedReparation.reparation_state_token === 'RESERVED') {
             return (
               <HStack>
                 <SetReleasedActionButtonComponent
-                  reparation={reparation}
+                  combinedReparation={combinedReparation}
                   icon={<UnlockIcon />}
                   colorScheme="gray"
                   text="Volgnummer vrijgeven"
                 />
-                <DeleteButtonComponent reparation={reparation} />
+                <DeleteButtonComponent
+                  combinedReparation={combinedReparation}
+                />
               </HStack>
             );
           }
@@ -311,7 +302,7 @@ const columns = [
                 Afgehandeld!
               </Button>
 
-              <DeleteButtonComponent reparation={reparation} />
+              <DeleteButtonComponent combinedReparation={combinedReparation} />
             </HStack>
           );
 
@@ -319,7 +310,7 @@ const columns = [
         default:
           return (
             <HStack>
-              <DeleteButtonComponent reparation={reparation} />
+              <DeleteButtonComponent combinedReparation={combinedReparation} />
             </HStack>
           );
       }
@@ -330,52 +321,25 @@ const columns = [
 
 const Page = () => {
   const toast = useToast();
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<ExtendedCombinedReparation[]>([]);
 
   useEffect(() => {
-    const getData = (setData: Dispatch<SetStateAction<Document[]>>) => {
+    const getData = (
+      setData: Dispatch<SetStateAction<ExtendedCombinedReparation[]>>
+    ) => {
       onSnapshot(
-        typedDb.reparations,
+        typedDb.combinedReparations,
         async (snapshot) => {
-          const result: Document[] = [];
+          const result: ExtendedCombinedReparation[] = [];
 
-          await Promise.all(
-            snapshot.docs.map(async (document) => {
-              const reparation: ExtendedReparation = {
-                id: document.id,
-                ...document.data(),
-              };
-
-              const itemSnapshot = await getDoc(
-                typedDb.item(reparation.item_id)
-              );
-              if (!itemSnapshot.exists()) {
-                throw Error();
-              }
-
-              const item: ExtendedItem = {
-                id: itemSnapshot.id,
-                ...itemSnapshot.data(),
-              };
-
-              const userSnapshot = await getDoc(typedDb.user(item.user_id));
-              if (!userSnapshot.exists()) {
-                throw Error();
-              }
-
-              const user: ExtendedUser = {
-                id: userSnapshot.id,
-                name: `${userSnapshot.data().first_name} ${userSnapshot.data().last_name}`,
-                ...userSnapshot.data(),
-              };
-
-              result.push({
-                item,
-                reparation,
-                user,
-              });
-            })
-          );
+          snapshot.docs.map(async (document) => {
+            const reparation: ExtendedCombinedReparation = {
+              id: document.id,
+              user_full_name: `${document.data().user_first_name} ${document.data().user_last_name}`,
+              ...document.data(),
+            };
+            result.push(reparation);
+          });
 
           setData(result);
         },

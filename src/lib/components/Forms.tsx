@@ -17,9 +17,10 @@ import {
 import { FirebaseError } from 'firebase/app';
 import {
   Timestamp,
+  addDoc,
   getDocs,
+  limit,
   query,
-  runTransaction,
   where,
 } from 'firebase/firestore';
 import type { FieldProps, FormikHelpers, FormikProps } from 'formik';
@@ -27,7 +28,6 @@ import { Field, Form, Formik } from 'formik';
 import { useRouter } from 'next/navigation';
 
 import { typedDb } from '../utils/db';
-import { db } from '../utils/firebase';
 import {
   validateFirstName,
   validateLastName,
@@ -63,56 +63,28 @@ function RegistrationFormComponent() {
   ) => {
     setStatus();
 
-    await runTransaction(db, async (transaction) => {
-      let userId: string | undefined;
+    const reparationCollectionReference = typedDb.combinedReparations;
+    addDoc(reparationCollectionReference, {
+      reparation_events: [
+        {
+          state_cycle: 'REGISTERED',
+          timestamp: Timestamp.fromDate(new Date()),
+        },
+      ],
+      reparation_remarks: '',
+      reparation_state_cycle: 'REGISTERED',
+      reparation_state_reparation: 'UNKNOWN',
+      reparation_state_token: 'RELEASED',
+      reparation_token: '',
 
-      const collectionReference = typedDb.users;
-      const usersQuery = query(
-        collectionReference,
-        where('mail', '==', values.mail)
-      );
-      const usersQuerySnapshot = await getDocs(usersQuery);
-      usersQuerySnapshot.forEach((doc) => {
-        userId = doc.id;
-      });
+      user_first_name: values.first_name,
+      user_last_name: values.last_name,
+      user_mail: values.mail,
+      user_phone: values.phone,
 
-      let userDocumentReference;
-      if (!userId) {
-        userDocumentReference = typedDb.user();
-      } else {
-        userDocumentReference = typedDb.user(userId);
-      }
-
-      await transaction.set(userDocumentReference, {
-        first_name: values.first_name,
-        last_name: values.last_name,
-        mail: values.mail,
-        phone: values.phone,
-      });
-
-      const itemDocumentReference = typedDb.item();
-      await transaction.set(itemDocumentReference, {
-        name: values.title,
-        description: values.description,
-        state: values.state,
-        user_id: userDocumentReference.id,
-      });
-
-      const reparationDocumentReference = typedDb.reparation();
-      await transaction.set(reparationDocumentReference, {
-        events: [
-          {
-            state_cycle: 'REGISTERED',
-            timestamp: Timestamp.fromDate(new Date()),
-          },
-        ],
-        item_id: itemDocumentReference.id,
-        remarks: '',
-        state_cycle: 'REGISTERED',
-        state_reparation: 'UNKNOWN',
-        state_token: 'RELEASED',
-        token: '',
-      });
+      item_name: values.title,
+      item_description: values.description,
+      item_state: values.state,
     })
       .then(() => {
         resetForm();
@@ -340,66 +312,19 @@ function TrackFormComponent() {
   ) => {
     setStatus();
     try {
-      let userId: string = '';
-      const reparations: Record<string, string> = {};
-
-      const itemIdsFromToken: string[] = [];
-      const itemIdsFromUser: string[] = [];
-
-      const reparationsCollectionReference = typedDb.reparations;
-      const tokensQuery = query(
+      const reparationsCollectionReference = typedDb.combinedReparations;
+      const reparationQuery = query(
         reparationsCollectionReference,
-        where('token', '==', values.token)
+        where('reparation_token', '==', values.token),
+        where('user_mail', '==', values.mail),
+        limit(1)
       );
-      const tokensQuerySnapshot = await getDocs(tokensQuery);
-      tokensQuerySnapshot.forEach((doc) => {
-        itemIdsFromToken.push(doc.data().item_id);
-        reparations[doc.data().item_id] = doc.id;
-      });
-      if (itemIdsFromToken.length === 0) {
+      const reparationQuerySnapshot = await getDocs(reparationQuery);
+
+      if (reparationQuerySnapshot.size === 0) {
         setStatus({
           status: 'ERROR',
           message: 'We konden geen reparatie vinden met deze volgnummer.',
-        });
-        return;
-      }
-
-      const usersCollectionReference = typedDb.users;
-      const userQuery = query(
-        usersCollectionReference,
-        where('mail', '==', values.mail)
-      );
-      const userQuerySnapshot = await getDocs(userQuery);
-      userQuerySnapshot.forEach((doc) => {
-        userId = doc.id;
-      });
-      if (!userId) {
-        setStatus({
-          status: 'ERROR',
-          message: 'We konden geen gebruiker vinden met dit e-mailadres.',
-        });
-        return;
-      }
-
-      const itemsCollectionReference = typedDb.items;
-      const itemsQuery = query(
-        itemsCollectionReference,
-        where('user_id', '==', userId)
-      );
-      const itemsQuerySnapshot = await getDocs(itemsQuery);
-      itemsQuerySnapshot.forEach((doc) => {
-        itemIdsFromUser.push(doc.id);
-      });
-
-      const intersectedItemIds = itemIdsFromToken.filter((value) =>
-        itemIdsFromUser.includes(value)
-      );
-
-      if (intersectedItemIds.length === 0) {
-        setStatus({
-          status: 'ERROR',
-          message:
-            'We konden geen reparatie vinden met deze combinatie van e-mailadres en volgnummer.',
         });
         return;
       }
@@ -409,7 +334,7 @@ function TrackFormComponent() {
         status: 'SUCCESS',
         message: 'Even geduld, we sturen u door naar de tracking pagina.',
       });
-      push(`/track/reparation?id=${reparations[intersectedItemIds[0]]}`);
+      push(`/track/reparation?id=${reparationQuerySnapshot.docs[0].id}`);
     } catch (error) {
       const code = error instanceof FirebaseError ? error.code : 'unknown';
 

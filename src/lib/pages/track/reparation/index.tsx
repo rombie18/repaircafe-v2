@@ -22,12 +22,12 @@ import {
   LoadingWidgetComponent,
   ErrorWidgetComponent,
 } from '~/lib/components/Widgets';
-import type { ExtendedReparation } from '~/lib/models/reparation';
 import { typedDb } from '~/lib/utils/db';
+import type { ExtendedCombinedReparation } from '~/lib/utils/models';
 
 interface ReparationResult {
   status: string;
-  reparation: ExtendedReparation | undefined;
+  reparation: ExtendedCombinedReparation | undefined;
 }
 
 const Page = () => {
@@ -42,7 +42,7 @@ const Page = () => {
       setData: Dispatch<SetStateAction<ReparationResult | undefined>>
     ) => {
       onSnapshot(
-        typedDb.reparation(id),
+        typedDb.combinedReparation(id),
         (snapshot) => {
           if (!snapshot.exists()) {
             setData({
@@ -52,8 +52,9 @@ const Page = () => {
             return;
           }
 
-          const result: ExtendedReparation = {
+          const result: ExtendedCombinedReparation = {
             id: snapshot.id,
+            user_full_name: `${snapshot.data().user_first_name} ${snapshot.data().user_last_name}`,
             ...snapshot.data(),
           };
 
@@ -124,7 +125,7 @@ const Page = () => {
               <FormLabel>Opmerkingen</FormLabel>
               <Textarea
                 isDisabled
-                value={reparationResult.reparation.remarks}
+                value={reparationResult.reparation.reparation_remarks}
               />
               <FormHelperText>
                 Als de technieker of een medewerker opmerkingen heeft
