@@ -9,7 +9,15 @@ import {
   BellIcon,
   UnlockIcon,
 } from '@chakra-ui/icons';
-import { Badge, Box, Button, HStack, VStack, useToast } from '@chakra-ui/react';
+import {
+  Badge,
+  Box,
+  Button,
+  Flex,
+  HStack,
+  VStack,
+  useToast,
+} from '@chakra-ui/react';
 import type { SortingState } from '@tanstack/react-table';
 import { createColumnHelper } from '@tanstack/react-table';
 import { FirebaseError } from 'firebase/app';
@@ -380,7 +388,9 @@ const Page = () => {
           />
         </Box>
         <Box overflowX="auto" style={{ textWrap: 'nowrap' }}>
-          <Button onClick={() => push(`/register`)}>Item registreren</Button>
+          <Button mr={1} onClick={() => push(`/register`)}>
+            Item registreren
+          </Button>
           <Button onClick={() => push(`/kiosk`)}>Kiosk openen</Button>
         </Box>
       </HStack>

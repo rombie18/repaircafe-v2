@@ -78,7 +78,8 @@ export default function ReparationStepsComponent({
 
   return (
     <Stepper
-      h="75dvh"
+      minHeight="75dvh"
+      h="auto"
       w="100%"
       size="lg"
       orientation="vertical"
