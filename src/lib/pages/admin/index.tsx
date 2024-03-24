@@ -9,15 +9,7 @@ import {
   BellIcon,
   UnlockIcon,
 } from '@chakra-ui/icons';
-import {
-  Badge,
-  Box,
-  Button,
-  Flex,
-  HStack,
-  VStack,
-  useToast,
-} from '@chakra-ui/react';
+import { Badge, Box, Button, HStack, VStack, useToast } from '@chakra-ui/react';
 import type { SortingState } from '@tanstack/react-table';
 import { createColumnHelper } from '@tanstack/react-table';
 import { FirebaseError } from 'firebase/app';
