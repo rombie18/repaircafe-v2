@@ -1,7 +1,10 @@
 'use client';
 
 import { Box, Flex } from '@chakra-ui/react';
-import type { ReactNode } from 'react';
+import { logEvent } from 'firebase/analytics';
+import { useEffect, type ReactNode } from 'react';
+
+import { analytics } from '../utils/firebase';
 
 import Footer from './Footer';
 import Header from './Header';
@@ -11,6 +14,18 @@ type LayoutProps = {
 };
 
 const Layout = ({ children }: LayoutProps) => {
+  useEffect(() => {
+    analytics.then((analyticsInstance) => {
+      if (analyticsInstance) {
+        logEvent(analyticsInstance, 'page_view', {
+          page_location: window.location.href,
+          page_path: window.location.pathname,
+          page_title: document.title,
+        });
+      }
+    });
+  }, []);
+
   return (
     <Box
       h="100dvh"
