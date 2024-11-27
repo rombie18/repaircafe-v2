@@ -1,3 +1,4 @@
+import { DeleteIcon } from '@chakra-ui/icons';
 import {
   Box,
   Button,
@@ -6,6 +7,7 @@ import {
   FormHelperText,
   FormLabel,
   HStack,
+  IconButton,
   Input,
   Radio,
   RadioGroup,
@@ -176,7 +178,9 @@ function RegistrationFormComponent() {
                     <FormControl
                       isInvalid={!!form.errors.mail && !!form.touched.mail}
                     >
-                      <FormLabel>E-mailadres</FormLabel>
+                      <FormLabel>
+                        E-mailadres <small>(optioneel)</small>
+                      </FormLabel>
                       <Input
                         {...field}
                         type="email"
@@ -200,7 +204,9 @@ function RegistrationFormComponent() {
                     <FormControl
                       isInvalid={!!form.errors.phone && !!form.touched.phone}
                     >
-                      <FormLabel>Telefoonnummer</FormLabel>
+                      <FormLabel>
+                        Telefoonnummer <small>(optioneel)</small>
+                      </FormLabel>
                       <Input
                         {...field}
                         type="tel"
@@ -241,7 +247,9 @@ function RegistrationFormComponent() {
                         !!form.errors.description && !!form.touched.description
                       }
                     >
-                      <FormLabel>Omschrijving probleem</FormLabel>
+                      <FormLabel>
+                        Omschrijving probleem <small>(optioneel)</small>
+                      </FormLabel>
                       <Textarea
                         {...field}
                         placeholder="Wanneer ik het toestel inschakel gebeurt er niets. Ik hoor een zoemend geluid."
@@ -286,9 +294,17 @@ function RegistrationFormComponent() {
               </VStack>
 
               <FormControl isInvalid={props.status?.status === 'ERROR'}>
-                <Button w="100%" isLoading={props.isSubmitting} type="submit">
-                  Registreren
-                </Button>
+                <HStack>
+                  <Button w="100%" isLoading={props.isSubmitting} type="submit">
+                    Registreren
+                  </Button>
+                  <IconButton
+                    onClick={() => props.resetForm()}
+                    isRound
+                    aria-label="Formulier leegmaken"
+                    icon={<DeleteIcon />}
+                  />
+                </HStack>
                 {props.status?.status === 'ERROR' ? (
                   <FormErrorMessage>{props.status?.message}</FormErrorMessage>
                 ) : (

@@ -17,8 +17,9 @@ function validateLastName(value: string) {
 function validateMail(value: string) {
   let error;
   if (!value) {
-    error = 'E-mailadres is vereist';
-  } else if (
+    return error;
+  }
+  if (
     !String(value).match(
       /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
     )
@@ -31,8 +32,9 @@ function validateMail(value: string) {
 function validatePhone(value: string) {
   let error;
   if (!value) {
-    error = 'Telefoonnummer is vereist';
-  } else if (
+    return error;
+  }
+  if (
     !String(value).match(
       /^(((\+|00)32[ ]?(?:\(0\)[ ]?)?)|0){1}(4(60|[789]\d)\/?(\s?\d{2}\.?){2}(\s?\d{2})|(\d\/?\s?\d{3}|\d{2}\/?\s?\d{2})(\.?\s?\d{2}){2})$/
     )
@@ -53,7 +55,7 @@ function validateTitle(value: string) {
 function validateDescription(value: string) {
   let error;
   if (!value) {
-    error = 'Omschrijving probleem is vereist';
+    return error;
   }
   return error;
 }
