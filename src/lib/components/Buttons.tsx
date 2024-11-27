@@ -44,7 +44,6 @@ import {
 } from '@chakra-ui/react';
 import { FirebaseError } from 'firebase/app';
 import {
-  Timestamp,
   arrayUnion,
   deleteDoc,
   getDocs,
@@ -57,10 +56,6 @@ import { useRef, useState } from 'react';
 import { typedDb } from '../utils/db';
 import { db } from '../utils/firebase';
 import { generateRandomToken } from '../utils/functions';
-import {
-  sendReparationDepositedMail,
-  sendReparationFinishedMail,
-} from '../utils/mailer';
 import type { ExtendedCombinedReparation } from '../utils/models';
 
 import {
@@ -345,20 +340,6 @@ function SetDepositedActionButtonComponent({
           timestamp: new Date(),
         }),
       });
-
-      const newCombinedReparation: ExtendedCombinedReparation = {
-        ...combinedReparation,
-        ...{
-          reparation_token: generatedtoken,
-          reparation_state_cycle: 'DEPOSITED',
-          reparation_state_token: 'RESERVED',
-        },
-      };
-      newCombinedReparation.reparation_events.push({
-        state_cycle: 'DEPOSITED',
-        timestamp: Timestamp.fromDate(new Date()),
-      });
-      await sendReparationDepositedMail(newCombinedReparation);
     })
       .catch((error) => {
         const code = error instanceof FirebaseError ? error.code : 'unknown';
@@ -562,20 +543,6 @@ function SetFinishedActionButtonComponent({
           timestamp: new Date(),
         }),
       });
-
-      const newCombinedReparation: ExtendedCombinedReparation = {
-        ...combinedReparation,
-        ...{
-          reparation_state_cycle: 'FINISHED',
-          reparation_state_reparation: value.toString(),
-          reparation_remarks: remarks,
-        },
-      };
-      newCombinedReparation.reparation_events.push({
-        state_cycle: 'FINISHED',
-        timestamp: Timestamp.fromDate(new Date()),
-      });
-      await sendReparationFinishedMail(newCombinedReparation);
     })
       .catch((error) => {
         const code = error instanceof FirebaseError ? error.code : 'unknown';
