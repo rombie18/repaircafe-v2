@@ -2,7 +2,6 @@ import { DeleteIcon } from '@chakra-ui/icons';
 import {
   Box,
   Button,
-  Divider,
   FormControl,
   FormErrorMessage,
   FormHelperText,
