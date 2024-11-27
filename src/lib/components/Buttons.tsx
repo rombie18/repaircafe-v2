@@ -43,19 +43,11 @@ import {
   useToast,
 } from '@chakra-ui/react';
 import { FirebaseError } from 'firebase/app';
-import {
-  arrayUnion,
-  deleteDoc,
-  getDocs,
-  query,
-  runTransaction,
-  where,
-} from 'firebase/firestore';
+import { arrayUnion, deleteDoc, runTransaction } from 'firebase/firestore';
 import { useRef, useState } from 'react';
 
 import { typedDb } from '../utils/db';
 import { db } from '../utils/firebase';
-import { generateRandomToken } from '../utils/functions';
 import type { ExtendedCombinedReparation } from '../utils/models';
 
 import {
@@ -314,25 +306,10 @@ function SetDepositedActionButtonComponent({
   const updateReparation = async () => {
     setIsLoading(true);
     await runTransaction(db, async (transaction) => {
-      const reservedTokens: Set<string> = new Set();
-
-      const collectionReference = typedDb.combinedReparations;
-      const tokensQuery = query(
-        collectionReference,
-        where('reparation_state_token', '==', 'RESERVED')
-      );
-      const tokensQuerySnapshot = await getDocs(tokensQuery);
-      tokensQuerySnapshot.forEach((doc) => {
-        reservedTokens.add(doc.data().reparation_token);
-      });
-
-      const generatedtoken = generateRandomToken(reservedTokens);
-
       const documentReference = typedDb.combinedReparation(
         combinedReparation.id
       );
       await transaction.update(documentReference, {
-        reparation_token: generatedtoken,
         reparation_state_cycle: 'DEPOSITED',
         reparation_state_token: 'RESERVED',
         reparation_events: arrayUnion({

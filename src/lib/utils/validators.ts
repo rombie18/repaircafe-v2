@@ -72,10 +72,8 @@ function validateToken(value: string) {
   let error;
   if (!value) {
     error = 'Volgnummer is vereist';
-  } else if (String(value).match(/^[a-z][0-9]*$/)) {
-    error = 'Enkel hoofdletters zijn toegelaten.';
-  } else if (!String(value).match(/^[A-Z][0-9]{2}$/)) {
-    error = 'Geef een geldig volgnummer op a.u.b.';
+  } else if (!String(value).match(/^[a-zA-Z0-9_]*$/)) {
+    error = 'Enkel letters en cijfers zijn toegelaten';
   }
   return error;
 }

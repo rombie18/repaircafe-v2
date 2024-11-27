@@ -2,6 +2,7 @@ import { DeleteIcon } from '@chakra-ui/icons';
 import {
   Box,
   Button,
+  Divider,
   FormControl,
   FormErrorMessage,
   FormHelperText,
@@ -48,6 +49,7 @@ interface RegisterFormValues {
   last_name: string;
   mail: string;
   phone: string;
+  token: string;
   title: string;
   description: string;
   state: string;
@@ -77,7 +79,7 @@ function RegistrationFormComponent() {
       reparation_state_cycle: 'REGISTERED',
       reparation_state_reparation: 'UNKNOWN',
       reparation_state_token: 'RELEASED',
-      reparation_token: '',
+      reparation_token: values.token,
 
       user_first_name: values.first_name,
       user_last_name: values.last_name,
@@ -89,7 +91,16 @@ function RegistrationFormComponent() {
       item_state: values.state,
     })
       .then(() => {
-        resetForm();
+        resetForm({
+          values: {
+            ...values,
+            token: '',
+            title: '',
+            description: '',
+            state: '',
+          },
+        });
+
         setStatus({
           status: 'SUCCESS',
           message: 'Gelukt! We hebben uw registratie goed ontvangen.',
@@ -114,6 +125,7 @@ function RegistrationFormComponent() {
           last_name: '',
           mail: '',
           phone: '',
+          token: '',
           title: '',
           description: '',
           state: '',
@@ -170,58 +182,81 @@ function RegistrationFormComponent() {
                     )}
                   </Field>
                 </HStack>
-                <Field name="mail" validate={validateMail}>
+
+                <HStack w="100%" alignItems="flex-start">
+                  <Field name="mail" validate={validateMail}>
+                    {({
+                      field,
+                      form,
+                    }: FieldProps<ChakraInputProps, RegisterFormValues>) => (
+                      <FormControl
+                        isInvalid={!!form.errors.mail && !!form.touched.mail}
+                      >
+                        <FormLabel>
+                          E-mailadres <small>(optioneel)</small>
+                        </FormLabel>
+                        <Input
+                          {...field}
+                          type="email"
+                          placeholder="jan.peeters@telenet.be"
+                          autoComplete="email"
+                        />
+                        <FormHelperText>
+                          Je zal op dit e-mailadres een melding ontvangen
+                          wanneer je toestel gerepareerd is.
+                        </FormHelperText>
+                        <FormErrorMessage>{form.errors.mail}</FormErrorMessage>
+                      </FormControl>
+                    )}
+                  </Field>
+
+                  <Field name="phone" validate={validatePhone}>
+                    {({
+                      field,
+                      form,
+                    }: FieldProps<ChakraInputProps, RegisterFormValues>) => (
+                      <FormControl
+                        isInvalid={!!form.errors.phone && !!form.touched.phone}
+                      >
+                        <FormLabel>
+                          Telefoonnummer <small>(optioneel)</small>
+                        </FormLabel>
+                        <Input
+                          {...field}
+                          type="tel"
+                          placeholder="0470 12 34 56"
+                          autoComplete="tel"
+                        />
+                        <FormHelperText>
+                          Moesten er zich toch problemen voordoen, bereiken we
+                          je via dit nummer.
+                        </FormHelperText>
+                        <FormErrorMessage>{form.errors.phone}</FormErrorMessage>
+                      </FormControl>
+                    )}
+                  </Field>
+                </HStack>
+
+                <Box h={1} />
+
+                <Field name="token" validate={validateToken}>
                   {({
                     field,
                     form,
                   }: FieldProps<ChakraInputProps, RegisterFormValues>) => (
                     <FormControl
-                      isInvalid={!!form.errors.mail && !!form.touched.mail}
+                      isInvalid={!!form.errors.title && !!form.touched.title}
                     >
-                      <FormLabel>
-                        E-mailadres <small>(optioneel)</small>
-                      </FormLabel>
-                      <Input
-                        {...field}
-                        type="email"
-                        placeholder="jan.peeters@telenet.be"
-                        autoComplete="email"
-                      />
+                      <FormLabel>Volgnummer</FormLabel>
+                      <Input {...field} placeholder="R18" />
                       <FormHelperText>
-                        Je zal op dit e-mailadres een melding ontvangen wanneer
-                        je toestel gerepareerd is.
+                        Zorg ervoor dat deze nummer uniek is om conflicten bij
+                        het oproepen en ophalen te vermijden.
                       </FormHelperText>
-                      <FormErrorMessage>{form.errors.mail}</FormErrorMessage>
+                      <FormErrorMessage>{form.errors.token}</FormErrorMessage>
                     </FormControl>
                   )}
                 </Field>
-
-                <Field name="phone" validate={validatePhone}>
-                  {({
-                    field,
-                    form,
-                  }: FieldProps<ChakraInputProps, RegisterFormValues>) => (
-                    <FormControl
-                      isInvalid={!!form.errors.phone && !!form.touched.phone}
-                    >
-                      <FormLabel>
-                        Telefoonnummer <small>(optioneel)</small>
-                      </FormLabel>
-                      <Input
-                        {...field}
-                        type="tel"
-                        placeholder="0470 12 34 56"
-                        autoComplete="tel"
-                      />
-                      <FormHelperText>
-                        Moesten er zich toch problemen voordoen, bereiken we je
-                        via dit nummer.
-                      </FormHelperText>
-                      <FormErrorMessage>{form.errors.phone}</FormErrorMessage>
-                    </FormControl>
-                  )}
-                </Field>
-
                 <Field name="title" validate={validateTitle}>
                   {({
                     field,
