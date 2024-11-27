@@ -53,3 +53,5 @@ sitemap*.xml
 
 # VS Code
 .vscode/settings.json
+
+private/
