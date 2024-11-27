@@ -334,7 +334,20 @@ function RegistrationFormComponent() {
                     Registreren
                   </Button>
                   <IconButton
-                    onClick={() => props.resetForm()}
+                    onClick={() =>
+                      props.resetForm({
+                        values: {
+                          first_name: '',
+                          last_name: '',
+                          mail: '',
+                          phone: '',
+                          token: '',
+                          title: '',
+                          description: '',
+                          state: '',
+                        },
+                      })
+                    }
                     isRound
                     aria-label="Formulier leegmaken"
                     icon={<DeleteIcon />}
