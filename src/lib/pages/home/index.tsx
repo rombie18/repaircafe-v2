@@ -16,8 +16,8 @@ const Page = () => {
           handen nemen en proberen te repareren.
         </Text>
         <Text>
-          De 2de editie van het Repair Café XL zal doorgaan op
-          <b> 27 maart </b>in de <b>Agora van Thomas More campus Geel</b>. U
+          De 3de editie van het Repair Café XL zal doorgaan op
+          <b> 4 december </b>in de <b>Agora van Thomas More campus Geel</b>. U
           bent welkom om langs te komen om uw kapot toestel te laten herstellen,
           maar ook voor vragen rond software, financieel advies, etc.
         </Text>

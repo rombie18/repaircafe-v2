@@ -11,7 +11,7 @@ const Page = () => {
           Heb je een stuk of niet goed werkend toestel en wil je dit graag laten
           repareren door een gemotiveerd team van studenten en docenten?
           Registreer hier je toestel en breng het naar ons herstelpunt op
-          <b> 27 maart </b>in de <b>Agora van Thomas More campus Geel</b>.
+          <b> 4 december </b>in de <b>Agora van Thomas More campus Geel</b>.
         </Text>
       </VStack>
 
