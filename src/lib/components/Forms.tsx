@@ -73,11 +73,19 @@ function RegistrationFormComponent() {
           state_cycle: 'REGISTERED',
           timestamp: Timestamp.fromDate(new Date()),
         },
+        {
+          state_cycle: 'DEPOSITED',
+          timestamp: Timestamp.fromDate(new Date()),
+        },
+        {
+          state_cycle: 'QUEUED',
+          timestamp: Timestamp.fromDate(new Date()),
+        },
       ],
       reparation_remarks: '',
-      reparation_state_cycle: 'REGISTERED',
+      reparation_state_cycle: 'QUEUED',
       reparation_state_reparation: 'UNKNOWN',
-      reparation_state_token: 'RELEASED',
+      reparation_state_token: 'RESERVED',
       reparation_token: values.token,
 
       user_first_name: values.first_name,
